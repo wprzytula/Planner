@@ -9,7 +9,7 @@ fn main() -> Result<(), sqlx::Error> {
     println!("Got event: {}", event.title);
     
     let event = block_on(
-        planner::event::create_event(
+        planner::event::insert(
             &pool, "dupa", &(chrono::Utc::now() + chrono::Duration::days(69)),
             &sqlx::postgres::types::PgInterval { months: 21, days: 37, microseconds: 1488 },
             None
@@ -24,6 +24,13 @@ fn main() -> Result<(), sqlx::Error> {
 
     println!("Deleted: {} rows", delete_result.rows_affected());
 
+    let events = block_on(
+        planner::event::get_all_events(&pool)
+    ).unwrap();
+    println!("Events currently in the db:");
+    for event in events {
+        println!("{:?}", event);
+    }
     Ok(())
 }
 
