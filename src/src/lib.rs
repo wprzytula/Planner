@@ -1,10 +1,12 @@
 // [TODO]: Contents of this file probably should be moved to separate library.
-pub mod user {
+pub mod event {
     use sqlx::postgres::types::PgInterval;
     use sqlx::PgPool;
     use chrono::Utc;
+    use sqlx::postgres::PgQueryResult;
     // Example on how to get objects from the database.
 
+    #[derive(Debug)]
     pub struct Event {
         pub id: i32,
         pub title: String,
@@ -21,4 +23,29 @@ pub mod user {
             .await?;
         Ok(event)
     }
+
+    // [TODO] As above :3
+    // [TODO] Some fancy builder pattern?
+    pub async fn create_event(pool: &PgPool, title: &str, date: &chrono::DateTime<Utc>,
+                              duration: &PgInterval, description: Option<String>) -> Result<Event, sqlx::Error> {
+        let event = sqlx::query_as!(Event,
+            "INSERT INTO events(title, date, duration, creation_date, description)
+             VALUES($1, $2, $3, $4, $5)
+             RETURNING *",
+        title, date, duration, chrono::offset::Utc::now(), description)
+            .fetch_one(pool)
+            .await?;
+        Ok(event)
+    }
+
+    // [TODO] You know what :*
+    pub async fn delete_by_id(pool: &PgPool, id: i32) -> Result<PgQueryResult, sqlx::Error> {
+        let query = sqlx::query!(
+            "DELETE FROM events
+             WHERE id = $1;", id)
+            .execute(pool)
+            .await?;
+        Ok(query)
+    }
+
 }
