@@ -52,8 +52,8 @@ pub mod scheduler {
             let event = sqlx::query_as!(Event,
             "INSERT INTO events(title, date, duration, creation_date, description)
              VALUES($1, $2, $3, $4, $5)
-             RETURNING *",
-        title, date, duration, chrono::offset::Utc::now(), description)
+             RETURNING *", title, date, duration,
+                chrono::offset::Utc::now(), description)
                 .fetch_one(pool)
                 .await?;
             Ok(event)
@@ -71,8 +71,7 @@ pub mod scheduler {
 
         pub async fn get_all_events(pool: &PgPool) -> Result<Vec<Event>, sqlx::Error> {
             let events = sqlx::query_as!(Event,
-            "SELECT * FROM events"
-        )
+            "SELECT * FROM events")
                 .fetch_all(pool) // -> Vec<Event>
                 .await?;
             Ok(events)
