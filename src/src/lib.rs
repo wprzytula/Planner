@@ -5,13 +5,17 @@ pub mod scheduler {
     use sqlx::PgPool;
     use sqlx::postgres::PgPoolOptions;
 
-    const DB_URL: &str = "postgres://51.38.126.54:8237/adam?user=adam&password=adam2137";
+    const DB_URI: &str = "postgres://51.38.126.54:8237/adam?user=adam&password=adam2137";
 
     pub async fn connect() -> Result<PgPool, sqlx::Error> {
         let pool = PgPoolOptions::new()
             .max_connections(5)
-            .connect(DB_URL).await?;
+            .connect(DB_URI).await?;
         Ok(pool)
+    }
+
+    pub async fn disconnect(pool: &PgPool) {
+        pool.close().await;
     }
 
     pub mod event {
@@ -77,12 +81,13 @@ pub mod scheduler {
 }
 
 #[cfg(test)]
-mod tests {
+mod unit_tests {
     use futures::executor::block_on;
-    use crate::scheduler::connect;
+    use crate::scheduler::{connect, disconnect};
 
     #[test]
     fn connection_test() {
-        block_on(connect()).unwrap();
+        let pool = block_on(connect()).unwrap();
+        block_on(disconnect(&pool));
     }
 }
