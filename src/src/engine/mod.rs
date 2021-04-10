@@ -11,7 +11,8 @@ pub mod db_wrapper;
 // [fixme]: Temporary definitions.
 type Error = sqlx::Error;
 // For now let us assume that we give only user's username (I am not sure if it's safe).
-type User = String;
+//type User = String;
+type User = db_wrapper::user::User;
 // This should be replaced with DTO or other temporary structure.
 type NewEventInfo = db_wrapper::event::Event;
 type EventModifyInfo = NewEventInfo;

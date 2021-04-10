@@ -1,33 +1,38 @@
 // [TODO]: User in DB.
 
+use crate::engine::Error;
 use futures::executor::block_on;
 use sha2::{Digest, Sha256};
 use sqlx::PgPool;
 
-pub fn login(pool: &PgPool, username: &str, password: &str) -> bool {
+pub struct User {
+    username: String,
+}
+
+pub fn login(pool: &PgPool, username: &str, password: &str) -> Result<Option<User>, Error> {
     let hashed = hash(password);
 
     let result = block_on(authenticate(pool, username, &hashed[..]));
 
     result
 }
-
-// [TODO] Make it work without unwrap() ;_;
-async fn authenticate(pool: &PgPool, username: &str, hash: &str) -> bool {
-    let user = sqlx::query!(
-        "SELECT EXISTS (
-                SELECT 1
-                FROM users
-                WHERE username = $1 AND
-                password = $2
-             )",
+async fn authenticate(
+    pool: &PgPool,
+    username: &str,
+    hashed_password: &str,
+) -> Result<Option<User>, Error> {
+    let user = sqlx::query_as!(
+        User,
+        "SELECT username
+        FROM users
+        WHERE username = $1 AND
+        password = $2",
         username,
-        hash
+        hashed_password
     )
-    .fetch_one(pool)
-    .await;
-
-    user.unwrap().exists.unwrap_or(false)
+    .fetch_optional(pool)
+    .await?;
+    Ok(user)
 }
 
 pub(self) fn hash(password: &str) -> String {
