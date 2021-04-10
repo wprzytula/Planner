@@ -16,28 +16,28 @@ type Error = sqlx::Error;
 //type User = String;
 type User = db_wrapper::user::User;
 // This should be replaced with DTO or other temporary structure.
-type NewEventInfo = db_wrapper::event::Event;
-type EventModifyInfo = NewEventInfo;
+type NewEventRequest = db_wrapper::event::Event;
+type EventModifyRequest = NewEventRequest;
 type Event = db_wrapper::event::Event;
 type EventId = i32;
 
 // [TODO]: Some functions would love to use transactions in DB.
 // [TODO]: Parameters and return types may change later!
 
-pub fn add_event(pool: &PgPool, user: &User, event: &NewEventInfo) -> Result<EventId, Error> {
+pub fn add_event(pool: &PgPool, user: &User, event: &NewEventRequest) -> Result<EventId, Error> {
     // [TODO]: Should add both event and many-to-many record connecting the event to the user.
-    begin_transaction(pool);
+    begin_transaction(pool)?;
     let new_event = block_on(insert_event(pool, event));
     return match new_event {
         Ok(event) => {
             let scheduled = block_on(insert_scheduled_event(pool, event.id, user.get_username()));
             match scheduled {
-                None => {
-                    end_transaction(pool);
+                Ok(()) => {
+                    end_transaction(pool)?;
                     Ok(event.id)
                 }
-                Some(error) => {
-                    rollback_transaction(pool).unwrap();
+                Err(error) => {
+                    rollback_transaction(pool)?;
                     Err(error)
                 }
             }
@@ -55,7 +55,7 @@ pub fn delete_event(pool: &PgPool, event_id: &EventId) -> Result<(), Error> {
     Ok(())
 }
 
-pub fn modify_event(pool: &PgPool, event: &EventModifyInfo) -> Result<(), Error> {
+pub fn modify_event(pool: &PgPool, event: &EventModifyRequest) -> Result<(), Error> {
     // [TODO]: Change it into more functions? Eg. modify duration, modify start time etc.
     Ok(())
 }
@@ -77,19 +77,23 @@ pub fn get_all_user_events(pool: &PgPool, user: &User) -> Result<Vec<Event>, Err
     })
 }
 
-fn begin_transaction(pool: &PgPool) -> Option<Error> {
-    block_on(async { sqlx::query!("BEGIN").execute(pool).await }).err()
+fn begin_transaction(pool: &PgPool) -> Result<(), Error> {
+    block_on(async { sqlx::query!("BEGIN").execute(pool).await })?;
+    Ok(())
 }
 
-fn end_transaction(pool: &PgPool) -> Option<Error> {
-    block_on(async { sqlx::query!("COMMIT").execute(pool).await }).err()
+fn end_transaction(pool: &PgPool) -> Result<(), Error> {
+    block_on(async { sqlx::query!("COMMIT").execute(pool).await })?;
+    Ok(())
 }
 
-fn rollback_transaction(pool: &PgPool) -> Option<Error> {
-    block_on(async { sqlx::query!("ROLLBACK").execute(pool).await }).err()
+fn rollback_transaction(pool: &PgPool) -> Result<(), Error> {
+    block_on(async { sqlx::query!("ROLLBACK").execute(pool).await })?;
+    Ok(())
 }
 
-async fn insert_scheduled_event(pool: &PgPool, event: i32, user: &str) -> Option<Error> {
+// [TODO]: Move this to db_wrapper
+async fn insert_scheduled_event(pool: &PgPool, event: i32, user: &str) -> Result<(), Error> {
     let result = sqlx::query!(
         "INSERT INTO schedule ( username, event )
          VALUES ( $1, $2 )",
@@ -97,9 +101,6 @@ async fn insert_scheduled_event(pool: &PgPool, event: i32, user: &str) -> Option
         event
     )
     .execute(pool)
-    .await;
-    match result {
-        Ok(_) => None,
-        Err(error) => Some(error),
-    }
+    .await?;
+    Ok(())
 }
