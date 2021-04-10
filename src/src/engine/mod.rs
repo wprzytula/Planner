@@ -3,7 +3,8 @@
 // [TODO]: Idea - create a new struct that will contain PgPool and logged user info.
 //          The following functions would be then methods of this struct.
 
-use sqlx::PgPool;
+use futures::executor::block_on;
+use sqlx::{PgPool, Row};
 
 // [fixme]: This probably should not be public.
 pub mod db_wrapper;
@@ -38,6 +39,18 @@ pub fn modify_event(pool: &PgPool, event: &EventModifyInfo) -> Result<(), Error>
 }
 
 pub fn get_all_user_events(pool: &PgPool, user: &User) -> Result<Vec<Event>, Error> {
-    // [TODO]:
-    Ok(Vec::new())
+    // [TODO]: test this baby
+    block_on(async {
+        sqlx::query_as!(
+            Event,
+            "SELECT E.*
+            FROM schedule S
+            LEFT JOIN events E
+            ON S.event = E.id
+            WHERE username = $1",
+            user.get_username()
+        )
+        .fetch_all(pool)
+        .await
+    })
 }
