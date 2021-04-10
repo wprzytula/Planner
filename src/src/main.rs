@@ -1,7 +1,7 @@
 use futures::executor::block_on;
 use planner::engine::db_wrapper;
 
-fn main() -> Result<(), sqlx::Error> {
+fn main() {
     let pool = block_on(db_wrapper::connect()).unwrap();
     let event = block_on(db_wrapper::event::get_event_by_id(&pool, 1)).unwrap();
 
@@ -31,5 +31,4 @@ fn main() -> Result<(), sqlx::Error> {
     for event in events {
         println!("{:?}", event);
     }
-    Ok(())
 }

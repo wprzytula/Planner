@@ -1,3 +1,4 @@
+use crate::engine::Error;
 use chrono::Utc;
 use sqlx::postgres::types::PgInterval;
 use sqlx::postgres::PgQueryResult;
@@ -13,8 +14,49 @@ pub struct Event {
     pub description: Option<String>, // Can be null, so it must be an Option.
 }
 
+impl Event {
+    pub fn new() -> Event {
+        Event {
+            id: 0,
+            title: "".to_string(),
+            date: chrono::offset::Utc::now(),
+            duration: PgInterval {
+                months: 0,
+                days: 0,
+                microseconds: 0,
+            },
+            creation_date: chrono::offset::Utc::now(),
+            description: None,
+        }
+    }
+
+    pub fn title(mut self, title: &str) -> Event {
+        self.title = String::from(title);
+
+        self
+    }
+
+    pub fn date(mut self, date: chrono::DateTime<Utc>) -> Event {
+        self.date = date;
+
+        self
+    }
+
+    pub fn duration(mut self, duration: PgInterval) -> Event {
+        self.duration = duration;
+
+        self
+    }
+
+    pub fn description(mut self, description: &str) -> Event {
+        self.description = Some(String::from(description));
+
+        self
+    }
+}
+
 // [TODO] Try making this more generic (not only for postgres).
-pub async fn get_event_by_id(pool: &PgPool, id: i32) -> Result<Event, sqlx::Error> {
+pub async fn get_event_by_id(pool: &PgPool, id: i32) -> Result<Event, Error> {
     let event = sqlx::query_as!(
         Event,
         "SELECT id, title, date, duration, creation_date, description \
@@ -26,10 +68,10 @@ pub async fn get_event_by_id(pool: &PgPool, id: i32) -> Result<Event, sqlx::Erro
     .await?;
     Ok(event)
 }
-
+/*
 // [TODO] As above :3
 // [TODO] Some fancy builder pattern?
-pub async fn insert(
+pub async fn insert_event(
     pool: &PgPool,
     title: &str,
     date: &chrono::DateTime<Utc>,
@@ -51,9 +93,26 @@ pub async fn insert(
     .await?;
     Ok(event)
 }
-
+*/
+// Because of function signatures in engine/mod.rs written by Adam.
+pub async fn insert_event(pool: &PgPool, event: &Event) -> Result<Event, Error> {
+    let new_event = sqlx::query_as!(
+        Event,
+        "INSERT INTO events(title, date, duration, creation_date, description)
+         VALUES ( $1, $2, $3, $4, $5 )
+         RETURNING *",
+        event.title,
+        event.date,
+        event.duration,
+        chrono::offset::Utc::now(),
+        event.description
+    )
+    .fetch_one(pool)
+    .await?;
+    Ok(new_event)
+}
 // [TODO] You know what :*
-pub async fn delete_by_id(pool: &PgPool, id: i32) -> Result<PgQueryResult, sqlx::Error> {
+pub async fn delete_by_id(pool: &PgPool, id: i32) -> Result<PgQueryResult, Error> {
     let query = sqlx::query!(
         "DELETE FROM events
              WHERE id = $1;",
@@ -64,7 +123,7 @@ pub async fn delete_by_id(pool: &PgPool, id: i32) -> Result<PgQueryResult, sqlx:
     Ok(query)
 }
 
-pub async fn get_all_events(pool: &PgPool) -> Result<Vec<Event>, sqlx::Error> {
+pub async fn get_all_events(pool: &PgPool) -> Result<Vec<Event>, Error> {
     let events = sqlx::query_as!(Event, "SELECT * FROM events")
         .fetch_all(pool) // -> Vec<Event>
         .await?;
