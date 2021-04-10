@@ -47,7 +47,6 @@ pub fn add_event(pool: &PgPool, user: &User, event: &NewEventRequest) -> Result<
             Err(error)
         }
     };
-    //Ok(42)
 }
 
 pub fn delete_event(pool: &PgPool, event_id: &EventId) -> Result<(), Error> {
@@ -61,7 +60,6 @@ pub fn modify_event(pool: &PgPool, event: &EventModifyRequest) -> Result<(), Err
 }
 
 pub fn get_all_user_events(pool: &PgPool, user: &User) -> Result<Vec<Event>, Error> {
-    // [TODO]: test this baby
     block_on(async {
         sqlx::query_as!(
             Event,

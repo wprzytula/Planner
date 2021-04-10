@@ -1,9 +1,10 @@
 use futures::executor::block_on;
-use planner::engine::db_wrapper;
+use planner::engine::{db_wrapper, get_all_user_events};
 use planner::engine::db_wrapper::event::Event;
 use planner::engine::db_wrapper::user::User;
 
 fn main() {
+    // [TODO]: Move these tests to test module.
     let pool = block_on(db_wrapper::connect()).unwrap();
     let event = block_on(db_wrapper::event::get_event_by_id(&pool, 1)).unwrap();
 
@@ -34,5 +35,12 @@ fn main() {
     for event in events {
         println!("{:?}", event);
     }
-    let user = User::new().password("ds");
+    let user = User::new().username("tester").password("test");
+
+    let testers_events = get_all_user_events(&pool, &user).unwrap();
+
+    println!("All events of user {}:", user.get_username());
+    for event in testers_events {
+        println!("{:?}", event);
+    }
 }
