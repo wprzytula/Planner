@@ -1,1 +1,62 @@
 // [TODO]: User in DB.
+
+use futures::executor::block_on;
+use sha2::{Digest, Sha256};
+use sqlx::PgPool;
+
+pub fn login(pool: &PgPool, username: &str, password: &str) -> bool {
+    let hashed = hash(password);
+
+    let result = block_on(authenticate(pool, username, &hashed[..]));
+
+    result
+}
+
+// [TODO] Make it work without unwrap() ;_;
+async fn authenticate(pool: &PgPool, username: &str, hash: &str) -> bool {
+    let user = sqlx::query!(
+        "SELECT EXISTS (
+                SELECT 1
+                FROM users
+                WHERE username = $1 AND
+                password = $2
+             )",
+        username,
+        hash
+    )
+    .fetch_one(pool)
+    .await;
+
+    user.unwrap().exists.unwrap_or(false)
+}
+
+pub(self) fn hash(password: &str) -> String {
+    let mut hasher = Sha256::new();
+
+    hasher.update(password);
+
+    let hash_string = format!("{:X}", hasher.finalize());
+
+    hash_string
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::engine::db_wrapper::user::hash;
+
+    #[test]
+    fn check_hash() {
+        assert_eq!(
+            hash("Test"),
+            "532EAABD9574880DBF76B9B8CC00832C20A6EC113D682299550D7A6E0F345E25"
+        )
+    }
+
+    #[test]
+    fn check_uppercase() {
+        assert_ne!(
+            hash("Test"),
+            "532eaabd9574880dbf76b9b8cc00832c20a6ec113d682299550d7a6e0f345e25"
+        )
+    }
+}
