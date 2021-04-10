@@ -1,5 +1,5 @@
-use sqlx::PgPool;
 use sqlx::postgres::PgPoolOptions;
+use sqlx::PgPool;
 
 // [TODO] Move this somewhere higher?
 const DB_URI: &str = "postgres://51.38.126.54:8237/adam?user=adam&password=adam2137";
@@ -7,7 +7,8 @@ const DB_URI: &str = "postgres://51.38.126.54:8237/adam?user=adam&password=adam2
 pub async fn connect() -> Result<PgPool, sqlx::Error> {
     let pool = PgPoolOptions::new()
         .max_connections(5)
-        .connect(DB_URI).await?;
+        .connect(DB_URI)
+        .await?;
     Ok(pool)
 }
 
@@ -20,8 +21,8 @@ pub mod user;
 
 #[cfg(test)]
 mod unit_tests {
-    use futures::executor::block_on;
     use crate::engine::db_wrapper::{connect, disconnect};
+    use futures::executor::block_on;
 
     #[test]
     fn connection_test() {
