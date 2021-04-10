@@ -13,6 +13,7 @@ pub struct User {
 
 // In my opinion the builder pattern will be perfect if we will add something
 // to the User struct.
+
 impl User {
     pub fn get_username(&self) -> &String {
         &self.username
