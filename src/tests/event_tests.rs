@@ -7,12 +7,10 @@ use sqlx::postgres::types::PgInterval;
 #[test]
 fn add_and_remove() {
     let pool = block_on(connect()).unwrap();
-    let event = Event::new().title("Test").date((chrono::Utc::now() + chrono::Duration::days(69)));
-    let event = block_on(event::insert_event(
-        &pool,
-        &event
-    ))
-    .unwrap();
+    let event = Event::new()
+        .title("Test")
+        .date((chrono::Utc::now() + chrono::Duration::days(69)));
+    let event = block_on(event::insert_event(&pool, &event)).unwrap();
 
     block_on(event::delete_by_id(&pool, event.id)).unwrap();
 
