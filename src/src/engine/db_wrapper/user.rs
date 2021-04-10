@@ -2,7 +2,6 @@
 
 use crate::engine::Error;
 use futures::executor::block_on;
-use futures::future::err;
 use sha2::{Digest, Sha256};
 use sqlx::PgPool;
 

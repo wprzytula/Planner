@@ -20,5 +20,5 @@ fn check_login() {
 
     assert!(delete.is_none());
 
-    disconnect(&pool);
+    block_on(disconnect(&pool));
 }
