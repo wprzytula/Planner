@@ -14,6 +14,47 @@ pub struct Event {
     pub description: Option<String>, // Can be null, so it must be an Option.
 }
 
+impl Event {
+    pub fn new() -> Event {
+        Event {
+            id: 0,
+            title: "".to_string(),
+            date: chrono::offset::Utc::now(),
+            duration: PgInterval {
+                months: 0,
+                days: 0,
+                microseconds: 0,
+            },
+            creation_date: chrono::offset::Utc::now(),
+            description: None,
+        }
+    }
+
+    pub fn title(mut self, title: &str) -> Event {
+        self.title = String::from(title);
+
+        self
+    }
+
+    pub fn date(mut self, date: chrono::DateTime<Utc>) -> Event {
+        self.date = date;
+
+        self
+    }
+
+    pub fn duration(mut self, duration: PgInterval) -> Event {
+        self.duration = duration;
+
+        self
+    }
+
+    pub fn description(mut self, description: &str) -> Event {
+        self.description = Some(String::from(description));
+
+        self
+    }
+}
+
 // [TODO] Try making this more generic (not only for postgres).
 pub async fn get_event_by_id(pool: &PgPool, id: i32) -> Result<Event, Error> {
     let event = sqlx::query_as!(
