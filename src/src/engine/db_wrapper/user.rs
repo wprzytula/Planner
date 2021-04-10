@@ -2,9 +2,11 @@
 
 use crate::engine::Error;
 use futures::executor::block_on;
+use futures::future::err;
 use sha2::{Digest, Sha256};
 use sqlx::PgPool;
 
+#[derive(Debug)]
 pub struct User {
     username: String,
     password: String,
@@ -17,12 +19,16 @@ impl User {
     pub fn new(username: &str) -> User {
         User {
             username: String::from(username),
-            password: "".to_string(),
+            password: String::from(""),
         }
     }
-    pub fn set_password(&mut self, password: &str) -> &mut User {
+    pub fn password(mut self, password: &str) -> User {
         self.password = hash(password);
 
+        self
+    }
+
+    pub fn build(self) -> User {
         self
     }
 }
@@ -38,9 +44,11 @@ pub async fn insert_user(pool: &PgPool, user: &User) -> bool {
     )
     .fetch_one(pool)
     .await;
-
-    return query.is_err();
+    //println!("{:#?}", query);
+    return query.is_ok();
 }
+
+pub async fn delete_user(pool: &PgPool, user: &User) {}
 
 pub fn login(pool: &PgPool, username: &str, password: &str) -> Result<Option<User>, Error> {
     let hashed = hash(password);
