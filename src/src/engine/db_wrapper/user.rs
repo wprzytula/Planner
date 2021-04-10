@@ -18,11 +18,17 @@ impl User {
         &self.username
     }
 
-    pub fn new(username: &str) -> User {
+    pub fn new() -> User {
         User {
-            username: String::from(username),
+            username: String::from(""),
             password: String::from(""),
         }
+    }
+
+    pub fn username(mut self, username: &str) -> User {
+        self.username = String::from(username);
+
+        self
     }
     pub fn password(mut self, password: &str) -> User {
         self.password = hash(password);
