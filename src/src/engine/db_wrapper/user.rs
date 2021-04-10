@@ -43,7 +43,20 @@ pub async fn insert_user(pool: &PgPool, user: &User) -> bool {
     return query.is_ok();
 }
 
-pub async fn delete_user(pool: &PgPool, user: &User) {}
+pub async fn delete_user(pool: &PgPool, user: &User) -> Option<Error> {
+    let query = sqlx::query!(
+        "DELETE FROM users
+        WHERE username = $1",
+        user.username
+    )
+    .execute(pool)
+    .await;
+
+    match query {
+        Ok(_) => None,
+        Err(error) => Some(error),
+    }
+}
 
 pub fn login(pool: &PgPool, username: &str, password: &str) -> Result<Option<User>, Error> {
     let hashed = hash(password);
