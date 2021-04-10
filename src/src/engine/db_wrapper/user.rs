@@ -7,6 +7,39 @@ use sqlx::PgPool;
 
 pub struct User {
     username: String,
+    password: String,
+}
+
+// In my opinion the builder pattern will be perfect if we will add something
+// to the User struct.
+// I think a non-consuming builder is better than consuming one.
+impl User {
+    pub fn new(username: &str) -> User {
+        User {
+            username: String::from(username),
+            password: "".to_string(),
+        }
+    }
+    pub fn set_password(&mut self, password: &str) -> &mut User {
+        self.password = hash(password);
+
+        self
+    }
+}
+
+pub async fn insert_user(pool: &PgPool, user: &User) -> bool {
+    let query = sqlx::query_as!(
+        User,
+        "INSERT INTO users ( username, password )
+         VALUES ( $1, $2 )
+         RETURNING *",
+        user.username,
+        user.password
+    )
+    .fetch_one(pool)
+    .await;
+
+    return query.is_err();
 }
 
 pub fn login(pool: &PgPool, username: &str, password: &str) -> Result<Option<User>, Error> {
@@ -16,6 +49,7 @@ pub fn login(pool: &PgPool, username: &str, password: &str) -> Result<Option<Use
 
     result
 }
+
 async fn authenticate(
     pool: &PgPool,
     username: &str,
@@ -23,7 +57,7 @@ async fn authenticate(
 ) -> Result<Option<User>, Error> {
     let user = sqlx::query_as!(
         User,
-        "SELECT username
+        "SELECT *
         FROM users
         WHERE username = $1 AND
         password = $2",
