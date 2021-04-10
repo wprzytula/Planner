@@ -14,7 +14,6 @@ pub struct User {
 
 // In my opinion the builder pattern will be perfect if we will add something
 // to the User struct.
-// I think a non-consuming builder is better than consuming one.
 impl User {
     pub fn new(username: &str) -> User {
         User {
@@ -25,10 +24,6 @@ impl User {
     pub fn password(mut self, password: &str) -> User {
         self.password = hash(password);
 
-        self
-    }
-
-    pub fn build(self) -> User {
         self
     }
 }
