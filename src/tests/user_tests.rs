@@ -5,8 +5,7 @@ use planner::engine::db_wrapper::{connect, disconnect};
 #[test]
 fn check_login() {
     let pool = block_on(connect()).unwrap();
-    let user = User::new("tester");
-    let user = user.password("test");
+    let user = User::new().username("tester").password("test");
 
     let insert = block_on(insert_user(&pool, &user));
 
