@@ -964,6 +964,7 @@ dependencies = [
  "chrono",
  "futures",
  "regex",
+ "sha2",
  "sqlx",
 ]
 

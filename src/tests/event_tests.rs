@@ -1,25 +1,17 @@
 use futures::executor::block_on;
 use planner::engine::db_wrapper::connect;
 use planner::engine::db_wrapper::event;
+use planner::engine::db_wrapper::event::Event;
 
 #[test]
 fn add_and_remove() {
     let pool = block_on(connect()).unwrap();
+    let event = Event::new()
+        .title("Test")
+        .date(chrono::Utc::now() + chrono::Duration::days(69));
+    let event = block_on(event::insert_event(&pool, &event)).unwrap();
 
-    let event = block_on(event::insert(
-        &pool,
-        "dupa",
-        &(chrono::Utc::now() + chrono::Duration::days(69)),
-        &sqlx::postgres::types::PgInterval {
-            months: 21,
-            days: 37,
-            microseconds: 1488,
-        },
-        None,
-    ))
-    .unwrap();
-
-    block_on(event::delete_by_id(&pool, event.id)).unwrap();
+    block_on(event::delete_by_id(&pool, &event.id)).unwrap();
 
     block_on(pool.close());
 }
