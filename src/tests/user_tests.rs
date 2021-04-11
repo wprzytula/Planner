@@ -5,13 +5,13 @@ use planner::engine::db_wrapper::{connect, disconnect};
 #[test]
 fn check_login() {
     let pool = block_on(connect()).unwrap();
-    let user = User::new().username("tester").password("test");
+    let user = User::new().username("testerek").password("testek");
 
     let insert = block_on(insert_user(&pool, &user));
 
     assert_eq!(insert, true);
 
-    login(&pool, "tester", "test")
+    login(&pool, "testerek", "testek")
         .unwrap()
         .expect("Login returned none.");
 
