@@ -1,4 +1,4 @@
-use crate::engine::Error;
+use crate::engine::{Error, EventModifyRequest};
 use chrono::Utc;
 use sqlx::postgres::types::PgInterval;
 use sqlx::postgres::PgQueryResult;
@@ -112,7 +112,7 @@ pub async fn insert_event(pool: &PgPool, event: &Event) -> Result<Event, Error> 
     Ok(new_event)
 }
 // [TODO] You know what :*
-pub async fn delete_by_id(pool: &PgPool, id: i32) -> Result<PgQueryResult, Error> {
+pub async fn delete_by_id(pool: &PgPool, id: &i32) -> Result<PgQueryResult, Error> {
     let query = sqlx::query!(
         "DELETE FROM events
              WHERE id = $1;",
@@ -128,4 +128,62 @@ pub async fn get_all_events(pool: &PgPool) -> Result<Vec<Event>, Error> {
         .fetch_all(pool) // -> Vec<Event>
         .await?;
     Ok(events)
+}
+
+pub async fn modify_event(
+    pool: &PgPool,
+    request: EventModifyRequest,
+) -> Result<PgQueryResult, Error> {
+    let event = sqlx::query_as!(
+        Event,
+        "SELECT id, title, date, duration, creation_date, description \
+             FROM events \
+             WHERE id = $1",
+        request.id
+    )
+    .fetch_one(pool)
+    .await?;
+
+    let new_event = set_update_info(request, event);
+
+    let query = sqlx::query!(
+        "UPDATE events \
+            SET title = $2, date = $3, duration = $4, creation_date = $5, description = $6\
+            WHERE id = $1",
+        new_event.id,
+        new_event.title,
+        new_event.date,
+        new_event.duration,
+        new_event.creation_date,
+        new_event.description
+    )
+    .execute(pool)
+    .await?;
+    Ok(query)
+}
+
+fn set_update_info(request: EventModifyRequest, event: Event) -> Event {
+    Event {
+        id: request.id,
+        title: match request.title {
+            Some(title) => title,
+            None => event.title,
+        },
+        date: match request.date {
+            Some(date) => date,
+            None => event.date,
+        },
+        duration: match request.duration {
+            Some(duration) => duration,
+            None => event.duration,
+        },
+        creation_date: match request.creation_date {
+            Some(creation_date) => creation_date,
+            None => event.creation_date,
+        },
+        description: match request.description {
+            Some(description) => description,
+            None => event.description,
+        },
+    }
 }
