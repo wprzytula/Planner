@@ -16,8 +16,8 @@ pub mod db_wrapper;
 // [fixme]: Temporary definitions.
 type Error = sqlx::Error;
 // For now let us assume that we give only user's username (I am not sure if it's safe).
-//type User = String;
 type User = db_wrapper::user::User;
+
 // This should be replaced with DTO or other temporary structure.
 type NewEventRequest = db_wrapper::event::Event;
 type Event = db_wrapper::event::Event;
@@ -34,6 +34,8 @@ pub struct EventModifyRequest {
 
 // [TODO]: Some functions would love to use transactions in DB.
 // [TODO]: Parameters and return types may change later!
+
+// TODO: make those encapsulated into Connection
 
 pub fn add_event(pool: &PgPool, user: &User, event: &NewEventRequest) -> Result<EventId, Error> {
     begin_transaction(pool)?;

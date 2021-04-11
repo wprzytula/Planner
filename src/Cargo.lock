@@ -963,6 +963,7 @@ dependencies = [
  "async-std",
  "chrono",
  "futures",
+ "regex",
  "sha2",
  "sqlx",
 ]

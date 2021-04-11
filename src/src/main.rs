@@ -4,6 +4,10 @@ use planner::engine::db_wrapper::user::User;
 use planner::engine::*;
 
 fn main() {
+    planner::interface::mainloop();
+}
+
+fn main2() {
     // [TODO]: Move these tests to test module.
     let pool = block_on(db_wrapper::connect()).unwrap();
     let event = block_on(db_wrapper::event::get_event_by_id(&pool, 1)).unwrap();

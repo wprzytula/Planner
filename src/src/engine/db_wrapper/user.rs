@@ -1,5 +1,7 @@
 // [TODO]: User in DB.
 
+pub(crate) const TEST_USER: &str = "testuser";
+
 use crate::engine::Error;
 use futures::executor::block_on;
 use sha2::{Digest, Sha256};
