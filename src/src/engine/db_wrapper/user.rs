@@ -1,6 +1,8 @@
 // [TODO]: User in DB.
 
-pub(crate) const TEST_USER: &str = "testuser";
+pub(crate) fn get_test_user() -> User {
+    User::new().username("Spongebob").password("Squarepants")
+}
 
 use crate::engine::Error;
 use futures::executor::block_on;

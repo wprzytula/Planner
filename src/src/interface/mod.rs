@@ -1,12 +1,10 @@
 // [TODO]: Interface of the Planner.
 
 // [TODO: remove this reminder
+use crate::engine::db_wrapper::user::get_test_user;
+use crate::engine::db_wrapper::Connection;
 /// Creating an engine for adding, removing, searching, displaying and
 /// modifying events.
-
-use sqlx::Error;
-use crate::engine::db_wrapper::Connection;
-use crate::engine::db_wrapper::user::TEST_USER;
 
 pub struct InterfaceError;
 
@@ -27,8 +25,7 @@ pub fn mainloop() -> Result<(), InterfaceError> {
     let stdin = std::io::stdin();
     let mut line = String::new();
 
-    let connection = Connection::new()
-        .expect("Failed to connect with Planner database! Exiting.");
+    let connection = Connection::new().expect("Failed to connect with Planner database! Exiting.");
 
     loop {
         line.truncate(0);
@@ -76,8 +73,7 @@ fn goodbye() -> Result<(), InterfaceError> {
 }
 
 fn display_events(connection: &Connection) -> Result<(), InterfaceError> {
-
-    let events = crate::engine::get_all_user_events(&connection.pool, TEST_USER)?;
+    let events = crate::engine::get_all_user_events(&connection.pool, &get_test_user())?;
     for event in events {
         println!("{:?}", event);
     }
@@ -85,16 +81,13 @@ fn display_events(connection: &Connection) -> Result<(), InterfaceError> {
 }
 
 fn provide_search_conditions() -> Result<(), InterfaceError> {
-
     Ok(())
 }
 
 fn provide_new_event_info() -> Result<(), InterfaceError> {
-
     Ok(())
 }
 
 fn choose_event_to_be_deleted() -> Result<(), InterfaceError> {
-
     Ok(())
 }

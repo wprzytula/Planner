@@ -7,9 +7,9 @@ fn main() {
     planner::interface::mainloop();
 }
 
-fn main2() {
+/*fn main2() {
     // [TODO]: Move these tests to test module.
-    let pool = block_on(db_wrapper::connect()).unwrap();
+    //let pool = block_on(db_wrapper::connect()).unwrap();
     let event = block_on(db_wrapper::event::get_event_by_id(&pool, 1)).unwrap();
 
     println!("Got event: {}", event.title);
@@ -73,3 +73,4 @@ fn main2() {
     let modified_event = block_on(db_wrapper::event::get_event_by_id(&pool, 58)).unwrap();
     println!("Event after returning its title: {}", modified_event.title);
 }
+*/

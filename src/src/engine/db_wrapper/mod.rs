@@ -1,20 +1,20 @@
+use futures::executor::block_on;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::PgPool;
-use futures::executor::block_on;
 
 // [TODO] Move this somewhere higher?
 const DB_URI: &str = "postgres://51.38.126.54:8237/adam?user=adam&password=adam2137";
 
 // TODO: add session info
 pub struct Connection {
-    pub pool : PgPool
+    pub pool: PgPool,
 }
 
 impl Connection {
     pub fn new() -> Result<Connection, sqlx::Error> {
         match block_on(connect()) {
-            Ok(pool) => Ok(Connection{ pool }),
-            Err(err) => Err(err)
+            Ok(pool) => Ok(Connection { pool }),
+            Err(err) => Err(err),
         }
     }
 }
