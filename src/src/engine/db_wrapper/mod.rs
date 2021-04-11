@@ -1,3 +1,4 @@
+use crate::engine::Error;
 use futures::executor::block_on;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::PgPool;
@@ -11,7 +12,7 @@ pub struct Connection {
 }
 
 impl Connection {
-    pub fn new() -> Result<Connection, sqlx::Error> {
+    pub fn new() -> Result<Connection, Error> {
         match block_on(connect()) {
             Ok(pool) => Ok(Connection { pool }),
             Err(err) => Err(err),
@@ -25,8 +26,7 @@ impl Drop for Connection {
     }
 }
 
-// TODO: remove pub, use RAII Connection instead
-pub async fn connect() -> Result<PgPool, sqlx::Error> {
+async fn connect() -> Result<PgPool, Error> {
     let pool = PgPoolOptions::new()
         .max_connections(5)
         .connect(DB_URI)
@@ -34,8 +34,7 @@ pub async fn connect() -> Result<PgPool, sqlx::Error> {
     Ok(pool)
 }
 
-// TODO: remove pub
-pub async fn disconnect(pool: &PgPool) {
+async fn disconnect(pool: &PgPool) {
     pool.close().await;
 }
 
