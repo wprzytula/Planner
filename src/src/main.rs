@@ -50,7 +50,7 @@ fn main() {
         date: None,
         duration: None,
         creation_date: None,
-        description: None
+        description: None,
     };
 
     modify_event(&pool, modify_request);
@@ -63,7 +63,7 @@ fn main() {
         date: None,
         duration: None,
         creation_date: None,
-        description: None
+        description: None,
     };
     modify_event(&pool, modify_request);
     let modified_event = block_on(db_wrapper::event::get_event_by_id(&pool, 58)).unwrap();
