@@ -76,24 +76,23 @@ pub async fn delete_user(pool: &PgPool, user: &User) -> Option<Error> {
 pub fn login(pool: &PgPool, username: &str, password: &str) -> Result<Option<User>, Error> {
     let hashed = hash(password);
 
-    let result = block_on(authenticate(pool, username, &hashed[..]));
+    let user = block_on(get_password(pool, username))?;
 
-    result
+    let result = check_hash(&hashed, &user.unwrap().password)?;
+
+    if result {
+        return Ok(user);
+    }
+    Ok(None)
 }
 
-async fn authenticate(
-    pool: &PgPool,
-    username: &str,
-    hashed_password: &str,
-) -> Result<Option<User>, Error> {
+async fn get_password(pool: &PgPool, username: &str) -> Result<Option<User>, Error> {
     let user = sqlx::query_as!(
         User,
         "SELECT *
         FROM users
-        WHERE username = $1 AND
-        password = $2",
-        username,
-        hashed_password
+        WHERE username = $1",
+        username
     )
     .fetch_optional(pool)
     .await?;
