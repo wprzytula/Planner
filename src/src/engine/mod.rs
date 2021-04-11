@@ -11,7 +11,7 @@ pub mod db_wrapper;
 // [fixme]: Temporary definitions.
 type Error = sqlx::Error;
 // For now let us assume that we give only user's username (I am not sure if it's safe).
-type User = String;
+type User = str;
 // This should be replaced with DTO or other temporary structure.
 type NewEventInfo = db_wrapper::event::Event;
 type EventModifyInfo = NewEventInfo;
@@ -20,6 +20,8 @@ type EventId = i32;
 
 // [TODO]: Some functions would love to use transactions in DB.
 // [TODO]: Parameters and return types may change later!
+
+// TODO: make those encapsulated into Connection
 
 pub fn add_event(pool: &PgPool, user: &User, event: &NewEventInfo) -> Result<EventId, Error> {
     // [TODO]: Should add both event and many-to-many record connecting the event to the user.

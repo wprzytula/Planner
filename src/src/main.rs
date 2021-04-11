@@ -1,7 +1,11 @@
 use futures::executor::block_on;
 use planner::engine::db_wrapper;
 
-fn main() -> Result<(), sqlx::Error> {
+fn main() {
+    planner::interface::mainloop();
+}
+
+fn main2() -> Result<(), sqlx::Error> {
     let pool = block_on(db_wrapper::connect()).unwrap();
     let event = block_on(db_wrapper::event::get_event_by_id(&pool, 1)).unwrap();
 
