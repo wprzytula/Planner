@@ -100,7 +100,8 @@ fn rollback_transaction(pool: &PgPool) -> Result<(), Error> {
 
 // [TODO]: Move this to db_wrapper
 async fn insert_scheduled_event(pool: &PgPool, event: i32, user: &str) -> Result<(), Error> {
-    let result = sqlx::query!(
+    // [fixme] Unused result?
+    let _result = sqlx::query!(
         "INSERT INTO schedule ( username, event )
          VALUES ( $1, $2 )",
         user,

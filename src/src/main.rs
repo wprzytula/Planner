@@ -53,7 +53,7 @@ fn main() {
         description: None,
     };
 
-    modify_event(&pool, modify_request);
+    let _res = modify_event(&pool, modify_request);
     let modified_event = block_on(db_wrapper::event::get_event_by_id(&pool, 58)).unwrap();
     println!("Event after modification: {}", modified_event.title);
 
@@ -65,7 +65,7 @@ fn main() {
         creation_date: None,
         description: None,
     };
-    modify_event(&pool, modify_request);
+    let _res = modify_event(&pool, modify_request);
     let modified_event = block_on(db_wrapper::event::get_event_by_id(&pool, 58)).unwrap();
     println!("Event after returning its title: {}", modified_event.title);
 }
