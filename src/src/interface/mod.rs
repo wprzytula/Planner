@@ -5,7 +5,6 @@ use crate::engine::db_wrapper::user::get_test_user;
 use crate::engine::db_wrapper::Connection;
 /// Creating an engine for adding, removing, searching, displaying and
 /// modifying events.
-use sqlx::Error;
 
 pub struct InterfaceError;
 
