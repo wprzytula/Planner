@@ -4,14 +4,15 @@
 /// Creating an engine for adding, removing, searching, displaying and
 /// modifying events.
 
-use sqlx::Error;
+use std::io;
+use crate::engine::{get_all_user_events, add_event};
 use crate::engine::db_wrapper::user::get_test_user;
 use crate::engine::db_wrapper::Connection;
-use crate::engine::db_wrapper::event::{Event, duration_from, Hours, ConversionError, Minutes};
+use crate::engine::db_wrapper::event::{Event, duration_from, Hours, Minutes};
 use sqlx::postgres::types::PgInterval;
-use std::io::Write;
-use chrono::{DateTime, Utc, Date, NaiveDateTime, NaiveDate, NaiveTime, FixedOffset, TimeZone};
+use chrono::{DateTime, Utc, NaiveDateTime, NaiveDate, NaiveTime, FixedOffset, TimeZone};
 use chrono::offset::LocalResult::Single;
+use std::io::Write;
 
 pub struct InterfaceError;
 
@@ -27,16 +28,27 @@ impl From<std::io::Error> for InterfaceError {
     }
 }
 
+fn readline_stripped(buf : &mut String) -> io::Result<()> {
+    io::stdin().read_line(buf)?;
+    buf.truncate(buf.trim_end().len());
+
+    Ok(())
+}
+
+fn get_string_stripped() -> io::Result<String> {
+    let mut buf = String::new();
+    io::stdin().read_line(&mut buf)?;
+    buf.truncate(buf.trim_end().len());
+
+    Ok(buf)
+}
+
 pub fn mainloop() -> Result<(), InterfaceError> {
     welcome()?;
-    let stdin = std::io::stdin();
-    let mut line = String::new();
 
     let connection = Connection::new().expect("Failed to connect with Planner database! Exiting.");
 
     loop {
-        line.truncate(0);
-
         println!("What are you willing to do? Enter corresponding number.");
 
         println!("(0 or EOF) Quit.");
@@ -45,19 +57,28 @@ pub fn mainloop() -> Result<(), InterfaceError> {
         println!("(3) Add a new event.");
         println!("(4) Delete an event.");
 
-        let nbytes = stdin.read_line(&mut line).expect("Stdin error.");
-        if nbytes == 0 {
-            break;
-        }
+        let choice = match get_string_stripped() {
+            Ok(s) => if s.is_empty() {break} else {s},
+            Err(_) => return Err(InterfaceError)
+        };
 
-        line = line.trim().parse().unwrap();
-
-        match &line[..] {
+        match &choice[..] {
             "0" => break,
-            "1" => display_events(&connection)?,
-            "2" => provide_search_conditions()?,
-            "3" => provide_new_event_info(&connection)?,
-            "4" => choose_event_to_be_deleted()?,
+            "1" => {
+                if let Err(_) = display_events(&connection) {
+                    println!("Error occured while trying to display events.")
+                }
+            },
+            "2" => if let Err(_) = provide_search_conditions(&connection) {
+                println!("Error occured while trying to search for events.")
+            },
+            "3" => if let Err(_) = provide_new_event_info(&connection) {
+                println!("Error occured while trying to add an event.");
+            },
+            "4" => match choose_event_to_be_deleted(&connection) {
+                Ok(_) => println!("Successfully deleted an event."),
+                Err(_) => println!("Error occured while trying to delete an event.")
+            },
             _ => {
                 println!("Unspecified input");
             }
@@ -80,17 +101,17 @@ fn goodbye() -> Result<(), InterfaceError> {
 }
 
 fn display_events(connection: &Connection) -> Result<(), InterfaceError> {
-    let events = crate::engine::get_all_user_events(&connection.pool, &get_test_user())?;
+    let events = get_all_user_events(&connection.pool, &get_test_user())?;
     if events.is_empty() {
         println!("Nothing here, apparently!")
     }
     for event in events {
-        println!("{:?}", event);
+        println!("{}", event);
     }
     Ok(())
 }
 
-fn provide_search_conditions() -> Result<(), InterfaceError> {
+fn provide_search_conditions(connection: &Connection) -> Result<(), InterfaceError> {
     Ok(())
 }
 
@@ -100,10 +121,8 @@ fn provide_new_event_info(connection: &Connection) -> Result<(), InterfaceError>
     println!("Okey, let's provide us with required information about the event.");
     println!("What's gonna be a title?");
 
-    let mut title = String::new();
-    if let Err(_) = stdin.read_line(&mut title) {
-        return Err(InterfaceError);
-    } else if title.is_empty() {
+    let title = get_string_stripped()?;
+    if title.is_empty() {
         println!("Title must not be empty!");
         return Err(InterfaceError)
     }
@@ -111,11 +130,7 @@ fn provide_new_event_info(connection: &Connection) -> Result<(), InterfaceError>
     println!("What's gonna be a date of the event? (Or a start date, if spans several days)");
     println!("(Use format: YYYY-MM-DD)");
 
-    let mut date = String::new();
-    let mut time = String::new();
-    if let Err(_) = stdin.read_line(&mut date) {
-        return Err(InterfaceError);
-    }
+    let date = get_string_stripped()?;
 
     let date_p = match NaiveDate::parse_from_str(&date.trim()[..], "%Y-%m-%d") {
         Ok(date) => date,
@@ -127,9 +142,7 @@ fn provide_new_event_info(connection: &Connection) -> Result<(), InterfaceError>
 
     println!("What's gonna be start time of the event?");
     println!("(Use format: HH:MM)");
-    if let Err(_) = stdin.read_line(&mut time) {
-        return Err(InterfaceError);
-    }
+    let time = get_string_stripped()?;
 
     let time_p = match NaiveTime::parse_from_str(&time.trim()[..], "%H:%M") {
         Ok(time) => time,
@@ -170,11 +183,8 @@ fn provide_new_event_info(connection: &Connection) -> Result<(), InterfaceError>
 
         print!("{}:\t", datum.0);
         std::io::stdout().flush()?;
-        if let Err(_) = stdin.read_line(&mut datum.1) {
-            return Err(InterfaceError);
-        }
-        datum.1.truncate(datum.1.trim_end().len());
-        *datum.2 = match datum.1.trim().parse::<u32>() {
+        readline_stripped(datum.1)?;
+        *datum.2 = match datum.1.parse::<u32>() {
             Ok(x) => x,
             Err(_) => {
                 println!("Invalid number: {}", datum.1);
@@ -228,17 +238,24 @@ fn provide_new_event_info(connection: &Connection) -> Result<(), InterfaceError>
         confirmation.truncate(confirmation.trim_end().len());
     }
     if confirmation == "OK" {
-        if let Err(_) = crate::engine::add_event(&connection.pool, &get_test_user(), &new_event) {
-            println!("Error occured while adding the event.");
+        if let Err(_) = add_event(&connection.pool, &get_test_user(), &new_event) {
             return Err(InterfaceError);
         } else {
-            println!("Event successfully added to database.");
+            println!("Successfully added an event.");
         }
     }
 
     Ok(())
 }
 
-fn choose_event_to_be_deleted() -> Result<(), InterfaceError> {
+fn choose_event_to_be_deleted(connection: &Connection) -> Result<(), InterfaceError> {
+    let events = get_all_user_events(&connection.pool, &get_test_user())?;
+    if events.is_empty() {
+        println!("Nothing here, apparently!")
+    }
+    for event in events {
+        println!("{}", event);
+    }
+
     Ok(())
 }
