@@ -3,7 +3,6 @@ use chrono::{TimeZone, Utc};
 use sqlx::postgres::types::PgInterval;
 use sqlx::postgres::PgQueryResult;
 use sqlx::PgPool;
-use std::arch::x86_64::_mm_test_all_ones;
 use std::fmt;
 
 const SECS_TO_DISTANT_YEAR: i64 = 10000000000;
@@ -127,12 +126,11 @@ impl fmt::Display for Event {
     }
 }
 
-// [TODO] Try making this more generic (not only for postgres).
 pub async fn get_event_by_id(pool: &PgPool, id: i32) -> Result<Event, Error> {
     let event = sqlx::query_as!(
         Event,
-        "SELECT id, title, date, duration, creation_date, description \
-             FROM events \
+        "SELECT id, title, date, duration, creation_date, description
+             FROM events
              WHERE id = $1",
         id
     )
@@ -140,33 +138,7 @@ pub async fn get_event_by_id(pool: &PgPool, id: i32) -> Result<Event, Error> {
     .await?;
     Ok(event)
 }
-/*
-// [TODO] As above :3
-// [TODO] Some fancy builder pattern?
-pub async fn insert_event(
-    pool: &PgPool,
-    title: &str,
-    date: &chrono::DateTime<Utc>,
-    duration: &PgInterval,
-    description: Option<String>,
-) -> Result<Event, sqlx::Error> {
-    let event = sqlx::query_as!(
-        Event,
-        "INSERT INTO events(title, date, duration, creation_date, description)
-             VALUES($1, $2, $3, $4, $5)
-             RETURNING *",
-        title,
-        date,
-        duration,
-        chrono::offset::Utc::now(),
-        description
-    )
-    .fetch_one(pool)
-    .await?;
-    Ok(event)
-}
-*/
-// Because of function signatures in engine/mod.rs written by Adam.
+
 pub async fn insert_event(pool: &PgPool, event: &Event) -> Result<Event, Error> {
     let new_event = sqlx::query_as!(
         Event,
@@ -183,7 +155,20 @@ pub async fn insert_event(pool: &PgPool, event: &Event) -> Result<Event, Error> 
     .await?;
     Ok(new_event)
 }
-// [TODO] You know what :*
+
+pub async fn insert_scheduled_event(pool: &PgPool, event: i32, user: &str) -> Result<(), Error> {
+    // [fixme] Unused result?
+    let _result = sqlx::query!(
+        "INSERT INTO schedule ( username, event )
+         VALUES ( $1, $2 )",
+        user,
+        event
+    )
+    .execute(pool)
+    .await?;
+    Ok(())
+}
+
 pub async fn delete_by_id(pool: &PgPool, id: &i32) -> Result<PgQueryResult, Error> {
     let query = sqlx::query!(
         "DELETE FROM events
@@ -200,6 +185,21 @@ pub async fn get_all_events(pool: &PgPool) -> Result<Vec<Event>, Error> {
         .fetch_all(pool) // -> Vec<Event>
         .await?;
     Ok(events)
+}
+
+pub async fn get_all_user_events(pool: &PgPool, user: &str) -> Result<Vec<Event>, Error> {
+    let res = sqlx::query_as!(
+        Event,
+        "SELECT E.*
+            FROM schedule S
+            LEFT JOIN events E
+            ON S.event = E.id
+            WHERE username = $1",
+        user
+    )
+    .fetch_all(pool)
+    .await?;
+    Ok(res)
 }
 
 pub async fn get_user_events_by_criteria(
@@ -279,19 +279,19 @@ pub async fn modify_event(
 ) -> Result<PgQueryResult, Error> {
     let event = sqlx::query_as!(
         Event,
-        "SELECT id, title, date, duration, creation_date, description \
-             FROM events \
+        "SELECT id, title, date, duration, creation_date, description
+             FROM events
              WHERE id = $1",
         request.id
     )
     .fetch_one(pool)
     .await?;
 
-    let new_event = set_update_info(request, event);
+    let new_event = set_update_info(request, event).await;
 
     let query = sqlx::query!(
-        "UPDATE events \
-            SET title = $2, date = $3, duration = $4, creation_date = $5, description = $6\
+        "UPDATE events
+            SET title = $2, date = $3, duration = $4, creation_date = $5, description = $6
             WHERE id = $1",
         new_event.id,
         new_event.title,
@@ -305,7 +305,7 @@ pub async fn modify_event(
     Ok(query)
 }
 
-fn set_update_info(request: EventModifyRequest, event: Event) -> Event {
+async fn set_update_info(request: EventModifyRequest, event: Event) -> Event {
     Event {
         id: request.id,
         title: match request.title {

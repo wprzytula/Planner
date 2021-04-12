@@ -1,14 +1,10 @@
-// [TODO]: User in DB.
-
 pub(crate) fn get_test_user() -> User {
     User::new().username("Spongebob").password("Squarepants")
 }
 
 use crate::engine::Error;
 use djangohashers::Algorithm::Argon2;
-use djangohashers::{
-    check_password, check_password_tolerant, make_password_with_algorithm, HasherError,
-};
+use djangohashers::{check_password_tolerant, make_password_with_algorithm};
 use futures::executor::block_on;
 use sqlx::PgPool;
 
@@ -17,9 +13,6 @@ pub struct User {
     username: String,
     password: String,
 }
-
-// In my opinion the builder pattern will be perfect if we will add something
-// to the User struct.
 
 impl User {
     pub fn get_username(&self) -> &String {
@@ -60,19 +53,16 @@ pub async fn insert_user(pool: &PgPool, user: &User) -> bool {
     return query.is_ok();
 }
 
-pub async fn delete_user(pool: &PgPool, user: &User) -> Option<Error> {
-    let query = sqlx::query!(
+pub async fn delete_user_from_database(pool: &PgPool, user: &User) -> Result<(), Error> {
+    sqlx::query!(
         "DELETE FROM users
         WHERE username = $1",
         user.username
     )
     .execute(pool)
-    .await;
+    .await?;
 
-    match query {
-        Ok(_) => None,
-        Err(error) => Some(error),
-    }
+    Ok(())
 }
 
 pub fn login(pool: &PgPool, username: &str, password: &str) -> Result<Option<User>, Error> {
@@ -103,20 +93,9 @@ async fn get_password(pool: &PgPool, username: &str) -> Result<Option<User>, Err
     .await?;
     Ok(user)
 }
-/*
+
 pub(self) fn hash(password: &str) -> String {
-    let mut hasher = Sha256::new();
-
-    hasher.update(password);
-
-    let hash_string = format!("{:X}", hasher.finalize());
-
-    hash_string
-}
-*/
-pub(self) fn hash(password: &str) -> String {
-    let hash = make_password_with_algorithm(password, Argon2);
-    hash
+    make_password_with_algorithm(password, Argon2)
 }
 
 pub(self) fn check_hash(password: &str, hash: &str) -> bool {
@@ -126,8 +105,6 @@ pub(self) fn check_hash(password: &str, hash: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use crate::engine::db_wrapper::user::{check_hash, hash};
-    use djangohashers::check_password;
-
     #[test]
     fn test_good_hash() {
         let psw = "I Like Eating Salt :)";
@@ -135,7 +112,7 @@ mod tests {
     }
 
     #[test]
-    fn check_uppercase() {
+    fn test_bad_hash() {
         let wrg_psw = "I Don't Like Eating Salt :(";
         let psw = "I Like Eating Salt :)";
         assert!(!check_hash(wrg_psw, &*hash(psw)));
