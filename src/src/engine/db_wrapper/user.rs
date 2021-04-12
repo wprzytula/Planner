@@ -26,12 +26,12 @@ impl User {
         }
     }
 
-    pub fn username(mut self, username: &str) -> User {
+    pub fn username(mut self, username: &str) -> Self {
         self.username = String::from(username);
 
         self
     }
-    pub fn password(mut self, password: &str) -> User {
+    pub fn password(mut self, password: &str) -> Self {
         self.password = hash(password);
 
         self
