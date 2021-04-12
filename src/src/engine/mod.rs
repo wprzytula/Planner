@@ -4,6 +4,8 @@
 //          The following functions would be then methods of this struct.
 
 use crate::engine::db_wrapper::event::insert_event;
+use crate::engine::db_wrapper::schedule::{clear_user_schedule, delete_event_from_schedule};
+use crate::engine::db_wrapper::user::delete_user_from_database;
 use chrono::Utc;
 use futures::executor::block_on;
 use sqlx::postgres::types::PgInterval;
@@ -116,7 +118,45 @@ pub fn add_event(pool: &PgPool, user: &User, event: &NewEventRequest) -> Result<
 }
 
 pub fn delete_event(pool: &PgPool, event_id: &EventId) -> Result<PgQueryResult, Error> {
-    block_on(db_wrapper::event::delete_by_id(pool, event_id))
+    begin_transaction(pool).unwrap();
+
+    return match block_on(delete_event_from_schedule(pool, event_id)) {
+        Ok(_) => match block_on(db_wrapper::event::delete_by_id(pool, event_id)) {
+            Ok(val) => {
+                end_transaction(pool).unwrap();
+                Ok(val)
+            }
+            Err(error) => {
+                rollback_transaction(pool).unwrap();
+                Err(error)
+            }
+        },
+        Err(error) => {
+            rollback_transaction(pool).unwrap();
+            Err(error)
+        }
+    };
+}
+
+pub fn delete_user(pool: &PgPool, user: &User) -> Result<(), Error> {
+    begin_transaction(pool).unwrap();
+
+    return match block_on(clear_user_schedule(pool, user)) {
+        Ok(_) => match block_on(delete_user_from_database(pool, user)) {
+            Ok(_) => {
+                end_transaction(pool).unwrap();
+                Ok(())
+            }
+            Err(error) => {
+                rollback_transaction(pool).unwrap();
+                Err(error)
+            }
+        },
+        Err(error) => {
+            rollback_transaction(pool).unwrap();
+            Err(error)
+        }
+    };
 }
 
 pub fn modify_event(pool: &PgPool, request: EventModifyRequest) -> Result<PgQueryResult, Error> {
