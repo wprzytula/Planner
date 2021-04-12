@@ -3,7 +3,10 @@
 use crate::engine::db_wrapper::event::{duration_from, Event, Hours, Minutes};
 use crate::engine::db_wrapper::user::get_test_user;
 use crate::engine::db_wrapper::Connection;
-use crate::engine::{add_event, get_all_user_events, delete_event, get_user_event_by_id, GetEventsCriteria, get_user_events_by_criteria};
+use crate::engine::{
+    add_event, delete_event, get_all_user_events, get_user_event_by_id,
+    get_user_events_by_criteria, GetEventsCriteria,
+};
 use chrono::offset::LocalResult::Single;
 use chrono::{DateTime, FixedOffset, NaiveDate, NaiveDateTime, NaiveTime, TimeZone, Utc};
 use sqlx::postgres::types::PgInterval;
@@ -25,7 +28,7 @@ impl From<std::io::Error> for InterfaceError {
     }
 }
 
-fn datetime_to_utc(datetime : &NaiveDateTime) -> Result<DateTime<Utc>, InterfaceError> {
+fn datetime_to_utc(datetime: &NaiveDateTime) -> Result<DateTime<Utc>, InterfaceError> {
     let offset = FixedOffset::east(1 * 3600);
     match offset.from_local_datetime(datetime) {
         Single(dt) => Ok(Utc.from_utc_datetime(&dt.naive_utc())),
@@ -93,9 +96,11 @@ pub fn mainloop() -> Result<(), InterfaceError> {
                     println!("Error occured while trying to add an event.");
                 }
             }
-            "4" => if let Err(_) = choose_event_to_be_deleted(&connection) {
-                println!("Error occured while trying to delete an event.");
-            },
+            "4" => {
+                if let Err(_) = choose_event_to_be_deleted(&connection) {
+                    println!("Error occured while trying to delete an event.");
+                }
+            }
             _ => {
                 println!("Unspecified input");
             }
@@ -146,7 +151,6 @@ fn provide_search_conditions(connection: &Connection) -> Result<(), InterfaceErr
         criteria = criteria.description_like(&description);
     }
 
-
     println!("What's the oldest date and time to be queried? (format: YYYY-mm-dd HH:MM)");
     let datetime_old = get_string_stripped()?;
 
@@ -190,7 +194,7 @@ fn provide_search_conditions(connection: &Connection) -> Result<(), InterfaceErr
                 println!("{}", event);
             }
         }
-        Err(_) => return Err(InterfaceError)
+        Err(_) => return Err(InterfaceError),
     }
 
     Ok(())
@@ -377,16 +381,16 @@ fn choose_event_to_be_deleted(connection: &Connection) -> Result<(), InterfaceEr
     let decision = match get_string_stripped() {
         Ok(s) => match &s[..] {
             "OK" => true,
-            _ => false
+            _ => false,
         },
-        Err(_) => return Err(InterfaceError)
+        Err(_) => return Err(InterfaceError),
     };
     if decision {
         match delete_event(&connection.pool, &id) {
             Ok(_) => println!("Successfully deleted the event."),
             Err(e) => {
                 println!("{:?}", e);
-                return Err(InterfaceError)
+                return Err(InterfaceError);
             }
         };
     } else {
