@@ -94,25 +94,22 @@ impl GetEventsCriteria {
 pub fn add_event(pool: &PgPool, user: &User, event: &NewEventRequest) -> Result<EventId, Error> {
     begin_transaction(pool)?;
     let new_event = block_on(insert_event(pool, event));
-    return match new_event {
+    match new_event {
         Ok(event) => {
-            let scheduled = block_on(insert_scheduled_event(pool, event.id, user.get_username()));
-            match scheduled {
-                Ok(()) => {
-                    end_transaction(pool)?;
-                    Ok(event.id)
-                }
-                Err(error) => {
-                    rollback_transaction(pool)?;
-                    Err(error)
-                }
+            if let Err(error) = block_on(insert_scheduled_event(
+                pool, event.id, user.get_username())) {
+                rollback_transaction(pool)?;
+                Err(error)
+            } else {
+                end_transaction(pool)?;
+                Ok(event.id)
             }
         }
         Err(error) => {
             rollback_transaction(pool).unwrap();
             Err(error)
         }
-    };
+    }
 }
 
 pub fn delete_event(pool: &PgPool, event_id: &EventId) -> Result<PgQueryResult, Error> {
