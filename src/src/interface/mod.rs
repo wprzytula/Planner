@@ -1,7 +1,6 @@
 // [TODO]: Interface of the Planner.
 
-// [TODO: remove this reminder
-use crate::engine::db_wrapper::event::{duration_from, Event, Hours, Minutes, get_event_by_id};
+use crate::engine::db_wrapper::event::{duration_from, Event, Hours, Minutes};
 use crate::engine::db_wrapper::user::get_test_user;
 use crate::engine::db_wrapper::Connection;
 use crate::engine::{add_event, get_all_user_events, delete_event, get_user_event_by_id, GetEventsCriteria, get_user_events_by_criteria};
@@ -11,11 +10,6 @@ use sqlx::postgres::types::PgInterval;
 
 use std::io;
 use std::io::Write;
-use std::num::ParseIntError;
-use futures::executor::block_on;
-use sqlx::Error;
-use sqlx::postgres::PgQueryResult;
-use std::borrow::Borrow;
 
 pub struct InterfaceError;
 
@@ -156,22 +150,47 @@ fn provide_search_conditions(connection: &Connection) -> Result<(), InterfaceErr
     println!("What's the oldest date and time to be queried? (format: YYYY-mm-dd HH:MM)");
     let datetime_old = get_string_stripped()?;
 
+    let datetime_old = if !datetime_old.is_empty() {
+        match NaiveDateTime::parse_from_str(&datetime_old[..], "%Y-%m-%d %H:%M") {
+            Ok(dt) => datetime_to_utc(&dt)?,
+            Err(_) => {
+                println!("Invalid datetime format: {}", datetime_old);
+                return Err(InterfaceError);
+            }
+        }
+    } else {
+        chrono::offset::Utc.timestamp(0, 0)
+    };
+
     println!("What's the newest date and time to be queried? (format: YYYY-mm-dd HH:MM)");
     let datetime_new = get_string_stripped()?;
 
-    if !datetime.is_empty() {
-        let datetime = match NaiveDateTime::parse_from_str(&datetime[..], "%Y-%m-%d %H:%M") {
-            Ok(date) => date,
+    let datetime_new = if !datetime_new.is_empty() {
+        match NaiveDateTime::parse_from_str(&datetime_new[..], "%Y-%m-%d %H:%M") {
+            Ok(dt) => datetime_to_utc(&dt)?,
             Err(_) => {
-                println!("Invalid date format: {}", date);
+                println!("Invalid datetime format: {}", datetime_new);
                 return Err(InterfaceError);
             }
-        };
-    }
+        }
+    } else {
+        const SECS_TO_DISTANT_YEAR: i64 = 10000000000;
+        chrono::offset::Utc.timestamp(SECS_TO_DISTANT_YEAR, 0)
+    };
+
+    criteria = criteria.date_between(datetime_old, datetime_new);
 
     match get_user_events_by_criteria(&connection.pool, &get_test_user(), criteria) {
-        Ok(_) => {}
-        Err(_) => Err(InterfaceError)
+        Ok(events) => {
+            println!("These are results of your query:");
+            if events.is_empty() {
+                println!("Nothing here, apparently!")
+            }
+            for event in events {
+                println!("{}", event);
+            }
+        }
+        Err(_) => return Err(InterfaceError)
     }
 
     Ok(())
@@ -212,17 +231,9 @@ fn provide_new_event_info(connection: &Connection) -> Result<(), InterfaceError>
         }
     };
 
-    let offset = FixedOffset::east(1 * 3600);
-
     let datetime = NaiveDateTime::new(date_p, time_p);
 
-    let datetime_utc: DateTime<Utc> = match offset.from_local_datetime(&datetime) {
-        Single(dt) => Utc.from_utc_datetime(&dt.naive_utc()),
-        _ => {
-            println!("Date conversion error.");
-            return Err(InterfaceError);
-        }
-    };
+    let datetime_utc = datetime_to_utc(&datetime)?;
 
     println!("How long is the event going to last?");
     println!("(Use numbers only)");
