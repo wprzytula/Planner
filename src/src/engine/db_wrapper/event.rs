@@ -156,6 +156,20 @@ pub async fn insert_event(pool: &PgPool, event: &Event) -> Result<Event, Error> 
     Ok(new_event)
 }
 
+pub async fn insert_scheduled_event(pool: &PgPool, event: i32, user: &str) -> Result<(), Error> {
+    // [fixme] Unused result?
+    let _result = sqlx::query!(
+        "INSERT INTO schedule ( username, event )
+         VALUES ( $1, $2 )",
+        user,
+        event
+    )
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
+
 pub async fn delete_by_id(pool: &PgPool, id: &i32) -> Result<PgQueryResult, Error> {
     let query = sqlx::query!(
         "DELETE FROM events
