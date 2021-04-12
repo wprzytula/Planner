@@ -38,7 +38,7 @@ pub fn duration_from(months: u32, days: u32, hours: Hours, minutes: Minutes) -> 
     PgInterval {
         months: months as i32,
         days: days as i32,
-        microseconds: ((hours.0 as i64 * 60) + minutes.0 as i64) * 60 * 1000_000
+        microseconds: ((hours.0 as i64 * 60) + minutes.0 as i64) * 60 * 1000_000,
     }
 }
 
@@ -89,7 +89,7 @@ impl Event {
     pub fn description(mut self, description: Option<&str>) -> Event {
         self.description = match description {
             None => None,
-            Some(desc) => Some(String::from(desc))
+            Some(desc) => Some(String::from(desc)),
         };
 
         self
@@ -100,17 +100,30 @@ impl fmt::Display for Event {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let hours = self.duration.microseconds / (1000 * 60 * 60);
         let minutes = self.duration.microseconds % (1000 * 60 * 60) / (1000 * 60);
-        write!(f, "EVENT:\n\
-                   id:\t{},\n\
-                   title:\t{},\n\
-                   creation date:\t{},\n\
-                   date:\t{},\n\
-                   duration:\t{} months, {} days, {} hours, {} minutes,\n\
+        write!(
+            f,
+            "EVENT:\n\
+                   id:\t{}\n\
+                   title:\t{}\n\
+                   creation date:\t{}\n\
+                   date:\t{}\n\
+                   duration:\t{} months, {} days, {} hours, {} minutes\n\
                    description: {}\n
                    ",
-               self.id, self.title, self.creation_date, self.date,
-               self.duration.months, self.duration.days, hours, minutes,
-               if let Some(d) = &self.description {d} else {"<no description>"})
+            self.id,
+            self.title,
+            self.creation_date,
+            self.date,
+            self.duration.months,
+            self.duration.days,
+            hours,
+            minutes,
+            if let Some(d) = &self.description {
+                d
+            } else {
+                "<no description>"
+            }
+        )
     }
 }
 

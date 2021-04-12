@@ -1,17 +1,16 @@
 // [TODO]: Interface of the Planner.
 
 // [TODO: remove this reminder
-/// Creating an engine for adding, removing, searching, displaying and
-/// modifying events.
-
-use std::io;
-use crate::engine::{get_all_user_events, add_event};
+use crate::engine::db_wrapper::event::{duration_from, Event, Hours, Minutes};
 use crate::engine::db_wrapper::user::get_test_user;
 use crate::engine::db_wrapper::Connection;
-use crate::engine::db_wrapper::event::{Event, duration_from, Hours, Minutes};
-use sqlx::postgres::types::PgInterval;
-use chrono::{DateTime, Utc, NaiveDateTime, NaiveDate, NaiveTime, FixedOffset, TimeZone};
+use crate::engine::{add_event, get_all_user_events};
 use chrono::offset::LocalResult::Single;
+use chrono::{DateTime, FixedOffset, NaiveDate, NaiveDateTime, NaiveTime, TimeZone, Utc};
+use sqlx::postgres::types::PgInterval;
+/// Creating an engine for adding, removing, searching, displaying and
+/// modifying events.
+use std::io;
 use std::io::Write;
 
 pub struct InterfaceError;
@@ -28,7 +27,7 @@ impl From<std::io::Error> for InterfaceError {
     }
 }
 
-fn readline_stripped(buf : &mut String) -> io::Result<()> {
+fn readline_stripped(buf: &mut String) -> io::Result<()> {
     io::stdin().read_line(buf)?;
     buf.truncate(buf.trim_end().len());
 
@@ -58,8 +57,14 @@ pub fn mainloop() -> Result<(), InterfaceError> {
         println!("(4) Delete an event.");
 
         let choice = match get_string_stripped() {
-            Ok(s) => if s.is_empty() {break} else {s},
-            Err(_) => return Err(InterfaceError)
+            Ok(s) => {
+                if s.is_empty() {
+                    break;
+                } else {
+                    s
+                }
+            }
+            Err(_) => return Err(InterfaceError),
         };
 
         match &choice[..] {
@@ -68,16 +73,20 @@ pub fn mainloop() -> Result<(), InterfaceError> {
                 if let Err(_) = display_events(&connection) {
                     println!("Error occured while trying to display events.")
                 }
-            },
-            "2" => if let Err(_) = provide_search_conditions(&connection) {
-                println!("Error occured while trying to search for events.")
-            },
-            "3" => if let Err(_) = provide_new_event_info(&connection) {
-                println!("Error occured while trying to add an event.");
-            },
+            }
+            "2" => {
+                if let Err(_) = provide_search_conditions(&connection) {
+                    println!("Error occured while trying to search for events.")
+                }
+            }
+            "3" => {
+                if let Err(_) = provide_new_event_info(&connection) {
+                    println!("Error occured while trying to add an event.");
+                }
+            }
             "4" => match choose_event_to_be_deleted(&connection) {
                 Ok(_) => println!("Successfully deleted an event."),
-                Err(_) => println!("Error occured while trying to delete an event.")
+                Err(_) => println!("Error occured while trying to delete an event."),
             },
             _ => {
                 println!("Unspecified input");
@@ -124,7 +133,7 @@ fn provide_new_event_info(connection: &Connection) -> Result<(), InterfaceError>
     let title = get_string_stripped()?;
     if title.is_empty() {
         println!("Title must not be empty!");
-        return Err(InterfaceError)
+        return Err(InterfaceError);
     }
 
     println!("What's gonna be a date of the event? (Or a start date, if spans several days)");
@@ -136,7 +145,7 @@ fn provide_new_event_info(connection: &Connection) -> Result<(), InterfaceError>
         Ok(date) => date,
         Err(_) => {
             println!("Invalid date format: {}", date);
-            return Err(InterfaceError)
+            return Err(InterfaceError);
         }
     };
 
@@ -148,7 +157,7 @@ fn provide_new_event_info(connection: &Connection) -> Result<(), InterfaceError>
         Ok(time) => time,
         Err(_) => {
             println!("Invalid time format: {}", time);
-            return Err(InterfaceError)
+            return Err(InterfaceError);
         }
     };
 
@@ -171,16 +180,19 @@ fn provide_new_event_info(connection: &Connection) -> Result<(), InterfaceError>
     let mut days = String::new();
     let mut hours = String::new();
     let mut minutes = String::new();
-    let mut months_p : u32 = 0;
-    let mut days_p : u32 = 0;
-    let mut hours_p : u32 = 0;
-    let mut minutes_p : u32 = 0;
+    let mut months_p: u32 = 0;
+    let mut days_p: u32 = 0;
+    let mut hours_p: u32 = 0;
+    let mut minutes_p: u32 = 0;
 
-    for datum in [("Months", &mut months, &mut months_p),
+    for datum in [
+        ("Months", &mut months, &mut months_p),
         ("Days", &mut days, &mut days_p),
         ("Hours", &mut hours, &mut hours_p),
-        ("Minutes", &mut minutes, &mut minutes_p)].iter_mut() {
-
+        ("Minutes", &mut minutes, &mut minutes_p),
+    ]
+    .iter_mut()
+    {
         print!("{}:\t", datum.0);
         std::io::stdout().flush()?;
         readline_stripped(datum.1)?;
@@ -188,7 +200,7 @@ fn provide_new_event_info(connection: &Connection) -> Result<(), InterfaceError>
             Ok(x) => x,
             Err(_) => {
                 println!("Invalid number: {}", datum.1);
-                return Err(InterfaceError)
+                return Err(InterfaceError);
             }
         };
     }
@@ -197,18 +209,18 @@ fn provide_new_event_info(connection: &Connection) -> Result<(), InterfaceError>
         Ok(x) => x,
         Err(_) => {
             println!("Too big (over 23) hours amount: {}", hours_p);
-            return Err(InterfaceError)
+            return Err(InterfaceError);
         }
     };
     let minutes_p = match Minutes::new(minutes_p) {
         Ok(x) => x,
         Err(_) => {
             println!("Too big (over 59) minutes amount: {}", minutes_p);
-            return Err(InterfaceError)
+            return Err(InterfaceError);
         }
     };
 
-    let duration : PgInterval = duration_from(months_p, days_p, hours_p, minutes_p);
+    let duration: PgInterval = duration_from(months_p, days_p, hours_p, minutes_p);
 
     println!("Okey, eventually: would you like to add some lengthy description?");
     println!("(Just strike return to leave it empty)");
@@ -219,15 +231,33 @@ fn provide_new_event_info(connection: &Connection) -> Result<(), InterfaceError>
     }
     description.truncate(description.trim_end().len());
 
-    let description = if description.is_empty() { None } else {Some(&description[..])};
+    let description = if description.is_empty() {
+        None
+    } else {
+        Some(&description[..])
+    };
 
-    let new_event = Event::new().title(&title).date(datetime_utc).duration(duration).description(description);
+    let new_event = Event::new()
+        .title(&title)
+        .date(datetime_utc)
+        .duration(duration)
+        .description(description);
 
     println!("Let's summarize your event briefly:");
     println!("Title: {}", title);
-    println!("Start date & time: {} {}" , date, time);
-    println!("Duration: {} months, {} days, {} hours, {} minutes", months, days, hours, minutes);
-    println!("Description: {}", if let Some(d) = description {d} else {"<no description>"});
+    println!("Start date & time: {} {}", date, time);
+    println!(
+        "Duration: {} months, {} days, {} hours, {} minutes",
+        months, days, hours, minutes
+    );
+    println!(
+        "Description: {}",
+        if let Some(d) = description {
+            d
+        } else {
+            "<no description>"
+        }
+    );
 
     let mut confirmation = String::new();
     while confirmation != "OK" && confirmation != "NO" {
@@ -251,10 +281,11 @@ fn provide_new_event_info(connection: &Connection) -> Result<(), InterfaceError>
 fn choose_event_to_be_deleted(connection: &Connection) -> Result<(), InterfaceError> {
     let events = get_all_user_events(&connection.pool, &get_test_user())?;
     if events.is_empty() {
-        println!("Nothing here, apparently!")
+        println!("Nothing here, apparently!");
+        return Ok(());
     }
     for event in events {
-        println!("{}", event);
+        println!("Id: {}, title: {}", event.id, event.title);
     }
 
     Ok(())

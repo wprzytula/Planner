@@ -96,8 +96,9 @@ pub fn add_event(pool: &PgPool, user: &User, event: &NewEventRequest) -> Result<
     let new_event = block_on(insert_event(pool, event));
     match new_event {
         Ok(event) => {
-            if let Err(error) = block_on(insert_scheduled_event(
-                pool, event.id, user.get_username())) {
+            if let Err(error) =
+                block_on(insert_scheduled_event(pool, event.id, user.get_username()))
+            {
                 rollback_transaction(pool)?;
                 Err(error)
             } else {
