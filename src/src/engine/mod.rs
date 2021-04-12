@@ -142,8 +142,9 @@ pub fn get_all_user_events(pool: &PgPool, user: &User) -> Result<Vec<Event>, Err
 pub fn get_user_events_by_criteria(
     _pool: &PgPool,
     _user: &User,
-    _criteria: &GetEventsCriteria,
+    _criteria: GetEventsCriteria,
 ) -> Result<Vec<Event>, Error> {
+
     Ok(Vec::new())
 }
 

@@ -1,5 +1,5 @@
-use crate::engine::{Error, EventModifyRequest};
-use chrono::Utc;
+use crate::engine::{Error, EventModifyRequest, GetEventsCriteria};
+use chrono::{Utc, TimeZone};
 use sqlx::postgres::types::PgInterval;
 use sqlx::postgres::PgQueryResult;
 use sqlx::PgPool;
@@ -126,6 +126,55 @@ pub async fn delete_by_id(pool: &PgPool, id: &i32) -> Result<PgQueryResult, Erro
 pub async fn get_all_events(pool: &PgPool) -> Result<Vec<Event>, Error> {
     let events = sqlx::query_as!(Event, "SELECT * FROM events")
         .fetch_all(pool) // -> Vec<Event>
+        .await?;
+    Ok(events)
+}
+
+pub async fn get_user_events_by_criteria(
+    pool: &PgPool,
+    user: &str,
+    criteria: GetEventsCriteria,
+) -> Result<Vec<Event>, Error> {
+    let title = match criteria.title_like {
+        Some(str) => str,
+        None => String::new()
+    };
+    let date = match criteria.date_between {
+        Some(dates) => dates,
+        None => (chrono::offset::Utc.timestamp(0, 0), chrono::offset::Utc.timestamp(std::i64::MAX, 0))
+    };
+    let duration = match criteria.duration_between {
+        Some(durations) => durations,
+        None => (PgInterval {months: 0, days: 0, microseconds: 0}, PgInterval {months: 12000, days: 0, microseconds: 0})
+    };
+    let creation_date = match criteria.creation_date_between {
+        Some(dates) => dates,
+        None => (chrono::offset::Utc.timestamp(0, 0), chrono::offset::Utc.timestamp(std::i64::MAX, 0))
+    };
+    let description = match criteria.description_like {
+        Some(str) => str,
+        None => String::new()
+    };
+
+    let events = sqlx::query_as!(
+        Event,
+        "SELECT id, title, date, duration, creation_date, description
+            FROM schedule S
+            LEFT JOIN events E
+            ON S.event = E.id
+            WHERE username = $1
+                AND title LIKE '%' || $2 || '%'
+                AND date BETWEEN $3 AND $4
+                AND duration BETWEEN $5 AND $6
+                AND creation_date BETWEEN $7 AND $8
+                AND description LIKE '%' || $9 || '%'",
+        user,
+        title,
+        date.0, date.1,
+        duration.0, duration.1,
+        creation_date.0, creation_date.1,
+        description
+    ).fetch_all(pool)
         .await?;
     Ok(events)
 }
