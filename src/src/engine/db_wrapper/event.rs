@@ -3,7 +3,6 @@ use chrono::{TimeZone, Utc};
 use sqlx::postgres::types::PgInterval;
 use sqlx::postgres::PgQueryResult;
 use sqlx::PgPool;
-use std::arch::x86_64::_mm_test_all_ones;
 use std::fmt;
 
 const SECS_TO_DISTANT_YEAR: i64 = 10000000000;
@@ -127,7 +126,6 @@ impl fmt::Display for Event {
     }
 }
 
-// [TODO] Try making this more generic (not only for postgres).
 pub async fn get_event_by_id(pool: &PgPool, id: i32) -> Result<Event, Error> {
     let event = sqlx::query_as!(
         Event,
@@ -157,7 +155,20 @@ pub async fn insert_event(pool: &PgPool, event: &Event) -> Result<Event, Error> 
     .await?;
     Ok(new_event)
 }
-// [TODO] You know what :*
+
+pub async fn insert_scheduled_event(pool: &PgPool, event: i32, user: &str) -> Result<(), Error> {
+    // [fixme] Unused result?
+    let _result = sqlx::query!(
+        "INSERT INTO schedule ( username, event )
+         VALUES ( $1, $2 )",
+        user,
+        event
+    )
+    .execute(pool)
+    .await?;
+    Ok(())
+}
+
 pub async fn delete_by_id(pool: &PgPool, id: &i32) -> Result<PgQueryResult, Error> {
     let query = sqlx::query!(
         "DELETE FROM events
@@ -174,6 +185,21 @@ pub async fn get_all_events(pool: &PgPool) -> Result<Vec<Event>, Error> {
         .fetch_all(pool) // -> Vec<Event>
         .await?;
     Ok(events)
+}
+
+pub async fn get_all_user_events(pool: &PgPool, user: &str) -> Result<Vec<Event>, Error> {
+    let res = sqlx::query_as!(
+        Event,
+        "SELECT E.*
+            FROM schedule S
+            LEFT JOIN events E
+            ON S.event = E.id
+            WHERE username = $1",
+        user
+    )
+    .fetch_all(pool)
+    .await?;
+    Ok(res)
 }
 
 pub async fn get_user_events_by_criteria(
@@ -261,7 +287,7 @@ pub async fn modify_event(
     .fetch_one(pool)
     .await?;
 
-    let new_event = set_update_info(request, event);
+    let new_event = set_update_info(request, event).await;
 
     let query = sqlx::query!(
         "UPDATE events
@@ -279,7 +305,7 @@ pub async fn modify_event(
     Ok(query)
 }
 
-fn set_update_info(request: EventModifyRequest, event: Event) -> Event {
+async fn set_update_info(request: EventModifyRequest, event: Event) -> Event {
     Event {
         id: request.id,
         title: match request.title {

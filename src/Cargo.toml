@@ -4,15 +4,15 @@ version = "0.1.0"
 authors = [
     "Adam Boguszewski <ab417730@students.mimuw.edu.pl>",
     "Maciej Herdon <mh418267@students.mimuw.edu.pl",
-    "Wojciech Przytuła <wp418383@students.mimuw.edu.pl>"
-] # [TODO]: Dopiszcie się misie pysie.
+    "Wojciech Przytuła <wp418383@students.mimuw.edu.pl>",
+    "Rafał Szulc <rs418393@students.mimuw.edu.pl>"
+]
 
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-# [TODO]: Runtime may be changed later.
 sqlx = { version = "0.5", features = [ "runtime-async-std-native-tls", "postgres", "chrono" ] }
 async-std = { version = "1.6", features = [ "attributes" ] }
 futures = "0.3.13"

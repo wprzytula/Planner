@@ -3,10 +3,10 @@ use futures::executor::block_on;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::PgPool;
 
-// [TODO] Move this somewhere higher?
+// [TODO] Move this to config file.
 const DB_URI: &str = "postgres://adam:adam2137@51.38.126.54:8237/adam";
 
-// TODO: add session info
+// [TODO]: Add session info.
 pub struct Connection {
     pub pool: PgPool,
 }
@@ -36,6 +36,21 @@ async fn connect() -> Result<PgPool, Error> {
 
 async fn disconnect(pool: &PgPool) {
     pool.close().await;
+}
+
+pub fn begin_transaction(pool: &PgPool) -> Result<(), Error> {
+    block_on(sqlx::query!("BEGIN").execute(pool))?;
+    Ok(())
+}
+
+pub fn end_transaction(pool: &PgPool) -> Result<(), Error> {
+    block_on(sqlx::query!("COMMIT").execute(pool))?;
+    Ok(())
+}
+
+pub fn rollback_transaction(pool: &PgPool) -> Result<(), Error> {
+    block_on(sqlx::query!("ROLLBACK").execute(pool))?;
+    Ok(())
 }
 
 pub mod event;

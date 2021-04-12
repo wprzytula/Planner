@@ -1,5 +1,3 @@
-// [TODO]: User in DB.
-
 pub(crate) fn get_test_user() -> User {
     User::new().username("Spongebob").password("Squarepants")
 }

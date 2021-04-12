@@ -1,8 +1,5 @@
 /* Module with interface for engine for the Planner. */
 
-// [TODO]: Idea - create a new struct that will contain PgPool and logged user info.
-//          The following functions would be then methods of this struct.
-
 use crate::engine::db_wrapper::event::insert_event;
 use crate::engine::db_wrapper::schedule::{clear_user_schedule, delete_event_from_schedule};
 use crate::engine::db_wrapper::user::delete_user_from_database;
@@ -15,7 +12,6 @@ use sqlx::PgPool;
 // [fixme]: This probably should not be public.
 pub mod db_wrapper;
 
-// [fixme]: Temporary definitions.
 type Error = sqlx::Error;
 // For now let us assume that we give only user's username (I am not sure if it's safe).
 type User = db_wrapper::user::User;
@@ -88,70 +84,67 @@ impl GetEventsCriteria {
     }
 }
 
-// [TODO]: Some functions would love to use transactions in DB.
-// [TODO]: Parameters and return types may change later!
-
-// TODO: make those encapsulated into Connection
-
 pub fn add_event(pool: &PgPool, user: &User, event: &NewEventRequest) -> Result<EventId, Error> {
-    begin_transaction(pool)?;
+    db_wrapper::begin_transaction(pool)?;
     let new_event = block_on(insert_event(pool, event));
     match new_event {
         Ok(event) => {
-            if let Err(error) =
-                block_on(insert_scheduled_event(pool, event.id, user.get_username()))
-            {
-                rollback_transaction(pool)?;
+            if let Err(error) = block_on(db_wrapper::event::insert_scheduled_event(
+                pool,
+                event.id,
+                user.get_username(),
+            )) {
+                db_wrapper::rollback_transaction(pool)?;
                 Err(error)
             } else {
-                end_transaction(pool)?;
+                db_wrapper::end_transaction(pool)?;
                 Ok(event.id)
             }
         }
         Err(error) => {
-            rollback_transaction(pool).unwrap();
+            db_wrapper::rollback_transaction(pool).unwrap();
             Err(error)
         }
     }
 }
 
 pub fn delete_event(pool: &PgPool, event_id: &EventId) -> Result<PgQueryResult, Error> {
-    begin_transaction(pool).unwrap();
+    db_wrapper::begin_transaction(pool).unwrap();
 
     return match block_on(delete_event_from_schedule(pool, event_id)) {
         Ok(_) => match block_on(db_wrapper::event::delete_by_id(pool, event_id)) {
             Ok(val) => {
-                end_transaction(pool).unwrap();
+                db_wrapper::end_transaction(pool).unwrap();
                 Ok(val)
             }
             Err(error) => {
-                rollback_transaction(pool).unwrap();
+                db_wrapper::rollback_transaction(pool).unwrap();
                 Err(error)
             }
         },
         Err(error) => {
-            rollback_transaction(pool).unwrap();
+            db_wrapper::rollback_transaction(pool).unwrap();
             Err(error)
         }
     };
 }
 
 pub fn delete_user(pool: &PgPool, user: &User) -> Result<(), Error> {
-    begin_transaction(pool).unwrap();
+    db_wrapper::begin_transaction(pool).unwrap();
 
     return match block_on(clear_user_schedule(pool, user)) {
         Ok(_) => match block_on(delete_user_from_database(pool, user)) {
             Ok(_) => {
-                end_transaction(pool).unwrap();
+                db_wrapper::end_transaction(pool).unwrap();
                 Ok(())
             }
             Err(error) => {
-                rollback_transaction(pool).unwrap();
+                db_wrapper::rollback_transaction(pool).unwrap();
                 Err(error)
             }
         },
         Err(error) => {
-            rollback_transaction(pool).unwrap();
+            db_wrapper::rollback_transaction(pool).unwrap();
             Err(error)
         }
     };
@@ -162,19 +155,10 @@ pub fn modify_event(pool: &PgPool, request: EventModifyRequest) -> Result<PgQuer
 }
 
 pub fn get_all_user_events(pool: &PgPool, user: &User) -> Result<Vec<Event>, Error> {
-    // [TODO]: Move to db_wrapper
-    block_on(
-        sqlx::query_as!(
-            Event,
-            "SELECT E.*
-            FROM schedule S
-            LEFT JOIN events E
-            ON S.event = E.id
-            WHERE username = $1",
-            user.get_username()
-        )
-        .fetch_all(pool),
-    )
+    block_on(db_wrapper::event::get_all_user_events(
+        pool,
+        user.get_username(),
+    ))
 }
 
 pub fn get_user_events_by_criteria(
@@ -188,33 +172,4 @@ pub fn get_user_events_by_criteria(
         criteria,
     ))?;
     Ok(events)
-}
-
-fn begin_transaction(pool: &PgPool) -> Result<(), Error> {
-    block_on(sqlx::query!("BEGIN").execute(pool))?;
-    Ok(())
-}
-
-fn end_transaction(pool: &PgPool) -> Result<(), Error> {
-    block_on(sqlx::query!("COMMIT").execute(pool))?;
-    Ok(())
-}
-
-fn rollback_transaction(pool: &PgPool) -> Result<(), Error> {
-    block_on(sqlx::query!("ROLLBACK").execute(pool))?;
-    Ok(())
-}
-
-// [TODO]: Move this to db_wrapper
-async fn insert_scheduled_event(pool: &PgPool, event: i32, user: &str) -> Result<(), Error> {
-    // [fixme] Unused result?
-    let _result = sqlx::query!(
-        "INSERT INTO schedule ( username, event )
-         VALUES ( $1, $2 )",
-        user,
-        event
-    )
-    .execute(pool)
-    .await?;
-    Ok(())
 }
