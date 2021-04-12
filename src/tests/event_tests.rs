@@ -30,3 +30,12 @@ fn remove_nonexistent_event() {
         0
     );
 }
+
+#[test]
+fn get_all_events_test() {
+    let pool = Connection::new();
+    let pool = &pool.unwrap().pool;
+
+    let events = block_on(event::get_all_user_events(pool, "tester")).unwrap();
+    assert_eq!(events.len(), 2);
+}

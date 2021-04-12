@@ -105,6 +105,21 @@ pub async fn get_all_events(pool: &PgPool) -> Result<Vec<Event>, Error> {
     Ok(events)
 }
 
+pub async fn get_all_user_events(pool: &PgPool, user: &str) -> Result<Vec<Event>, Error> {
+    let res = sqlx::query_as!(
+        Event,
+        "SELECT E.*
+            FROM schedule S
+            LEFT JOIN events E
+            ON S.event = E.id
+            WHERE username = $1",
+        user
+    )
+    .fetch_all(pool)
+    .await?;
+    Ok(res)
+}
+
 pub async fn get_user_events_by_criteria(
     pool: &PgPool,
     user: &str,
@@ -190,7 +205,7 @@ pub async fn modify_event(
     .fetch_one(pool)
     .await?;
 
-    let new_event = set_update_info(request, event);
+    let new_event = set_update_info(request, event).await;
 
     let query = sqlx::query!(
         "UPDATE events
@@ -208,7 +223,7 @@ pub async fn modify_event(
     Ok(query)
 }
 
-fn set_update_info(request: EventModifyRequest, event: Event) -> Event {
+async fn set_update_info(request: EventModifyRequest, event: Event) -> Event {
     Event {
         id: request.id,
         title: match request.title {

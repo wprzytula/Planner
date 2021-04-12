@@ -155,19 +155,10 @@ pub fn modify_event(pool: &PgPool, request: EventModifyRequest) -> Result<PgQuer
 }
 
 pub fn get_all_user_events(pool: &PgPool, user: &User) -> Result<Vec<Event>, Error> {
-    // [TODO]: Move to db_wrapper
-    block_on(
-        sqlx::query_as!(
-            Event,
-            "SELECT E.*
-            FROM schedule S
-            LEFT JOIN events E
-            ON S.event = E.id
-            WHERE username = $1",
-            user.get_username()
-        )
-        .fetch_all(pool),
-    )
+    block_on(db_wrapper::event::get_all_user_events(
+        pool,
+        user.get_username(),
+    ))
 }
 
 pub fn get_user_events_by_criteria(
