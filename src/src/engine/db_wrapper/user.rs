@@ -5,8 +5,11 @@ pub(crate) fn get_test_user() -> User {
 }
 
 use crate::engine::Error;
+use djangohashers::Algorithm::Argon2;
+use djangohashers::{
+    check_password, check_password_tolerant, make_password_with_algorithm, HasherError,
+};
 use futures::executor::block_on;
-use sha2::{Digest, Sha256};
 use sqlx::PgPool;
 
 #[derive(Debug)]
@@ -53,7 +56,7 @@ pub async fn insert_user(pool: &PgPool, user: &User) -> bool {
     )
     .fetch_one(pool)
     .await;
-    //println!("{:#?}", query);
+    println!("{:#?}", query);
     return query.is_ok();
 }
 
@@ -73,32 +76,34 @@ pub async fn delete_user(pool: &PgPool, user: &User) -> Option<Error> {
 }
 
 pub fn login(pool: &PgPool, username: &str, password: &str) -> Result<Option<User>, Error> {
-    let hashed = hash(password);
+    let user = block_on(get_password(pool, username))?;
+    if user.is_none() {
+        return Ok(None);
+    }
+    let user = user.unwrap();
+    let hashed = &user.password[..];
 
-    let result = block_on(authenticate(pool, username, &hashed[..]));
-
-    result
+    let result = check_hash(password, hashed);
+    println!("{}", result);
+    if result {
+        return Ok(Some(user));
+    }
+    Ok(None)
 }
 
-async fn authenticate(
-    pool: &PgPool,
-    username: &str,
-    hashed_password: &str,
-) -> Result<Option<User>, Error> {
+async fn get_password(pool: &PgPool, username: &str) -> Result<Option<User>, Error> {
     let user = sqlx::query_as!(
         User,
         "SELECT *
         FROM users
-        WHERE username = $1 AND
-        password = $2",
-        username,
-        hashed_password
+        WHERE username = $1",
+        username
     )
     .fetch_optional(pool)
     .await?;
     Ok(user)
 }
-
+/*
 pub(self) fn hash(password: &str) -> String {
     let mut hasher = Sha256::new();
 
@@ -108,24 +113,32 @@ pub(self) fn hash(password: &str) -> String {
 
     hash_string
 }
+*/
+pub(self) fn hash(password: &str) -> String {
+    let hash = make_password_with_algorithm(password, Argon2);
+    hash
+}
+
+pub(self) fn check_hash(password: &str, hash: &str) -> bool {
+    check_password_tolerant(password, hash)
+}
 
 #[cfg(test)]
 mod tests {
-    use crate::engine::db_wrapper::user::hash;
+    use crate::engine::db_wrapper::user::{check_hash, hash};
+    use djangohashers::check_password;
 
     #[test]
-    fn check_hash() {
-        assert_eq!(
-            hash("Test"),
-            "532EAABD9574880DBF76B9B8CC00832C20A6EC113D682299550D7A6E0F345E25"
-        )
+    fn test_good_hash() {
+        let psw = "I Like Eating Salt :)";
+        assert!(check_hash(psw, &*hash(psw)));
     }
 
     #[test]
     fn check_uppercase() {
-        assert_ne!(
-            hash("Test"),
-            "532eaabd9574880dbf76b9b8cc00832c20a6ec113d682299550d7a6e0f345e25"
-        )
+        let wrg_psw = "I Don't Like Eating Salt :(";
+        let psw = "I Like Eating Salt :)";
+        assert!(!check_hash(wrg_psw, &*hash(psw)));
+        assert!(!check_hash(psw, &*hash(wrg_psw)));
     }
 }
