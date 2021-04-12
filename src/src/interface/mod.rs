@@ -27,12 +27,6 @@ impl From<std::io::Error> for InterfaceError {
     }
 }
 
-// impl From<std::num::ParseIntError> for InterfaceError {
-//     fn from(_: std::num::ParseIntError) -> Self {
-//         InterfaceError
-//     }
-// }
-
 pub fn mainloop() -> Result<(), InterfaceError> {
     welcome()?;
     let stdin = std::io::stdin();
@@ -119,31 +113,6 @@ fn provide_new_event_info(connection: &Connection) -> Result<(), InterfaceError>
 
     let mut date = String::new();
     let mut time = String::new();
-    // let mut year = String::new();
-    // let mut month = String::new();
-    // let mut day = String::new();
-    // let mut year_p : u32 = 0;
-    // let mut month_p : u32 = 0;
-    // let mut day_p : u32 = 0;
-    //
-    // for datum in [("Year", &mut year, &mut year_p),
-    //     ("Month", &mut month, &mut month_p),
-    //     ("Day", &mut day, &mut day_p)].iter_mut() {
-    //
-    //     print!("{}:\t", datum.0);
-    //     std::io::stdout().flush()?;
-    //     if let Err(_) = stdin.read_line(&mut datum.1) {
-    //         return Err(InterfaceError);
-    //     }
-    //     datum.1.truncate(datum.1.trim_end().len());
-    //     *datum.2 = match datum.1.trim().parse::<u32>() {
-    //         Ok(x) => x,
-    //         Err(_) => {
-    //             println!("Invalid number: {}", datum.1);
-    //             return Err(InterfaceError)
-    //         }
-    //     };
-    // }
     if let Err(_) = stdin.read_line(&mut date) {
         return Err(InterfaceError);
     }
