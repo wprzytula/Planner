@@ -4,7 +4,7 @@
 use crate::engine::db_wrapper::event::{duration_from, Event, Hours, Minutes, get_event_by_id};
 use crate::engine::db_wrapper::user::get_test_user;
 use crate::engine::db_wrapper::Connection;
-use crate::engine::{add_event, get_all_user_events, delete_event, get_user_event_by_id};
+use crate::engine::{add_event, get_all_user_events, delete_event, get_user_event_by_id, GetEventsCriteria, get_user_events_by_criteria};
 use chrono::offset::LocalResult::Single;
 use chrono::{DateTime, FixedOffset, NaiveDate, NaiveDateTime, NaiveTime, TimeZone, Utc};
 use sqlx::postgres::types::PgInterval;
@@ -15,6 +15,7 @@ use std::num::ParseIntError;
 use futures::executor::block_on;
 use sqlx::Error;
 use sqlx::postgres::PgQueryResult;
+use std::borrow::Borrow;
 
 pub struct InterfaceError;
 
@@ -27,6 +28,17 @@ impl From<sqlx::Error> for InterfaceError {
 impl From<std::io::Error> for InterfaceError {
     fn from(_: std::io::Error) -> Self {
         InterfaceError
+    }
+}
+
+fn datetime_to_utc(datetime : &NaiveDateTime) -> Result<DateTime<Utc>, InterfaceError> {
+    let offset = FixedOffset::east(1 * 3600);
+    match offset.from_local_datetime(datetime) {
+        Single(dt) => Ok(Utc.from_utc_datetime(&dt.naive_utc())),
+        _ => {
+            println!("Date conversion error.");
+            return Err(InterfaceError);
+        }
     }
 }
 
@@ -123,12 +135,49 @@ fn display_events(connection: &Connection) -> Result<(), InterfaceError> {
 }
 
 fn provide_search_conditions(connection: &Connection) -> Result<(), InterfaceError> {
+    println!("Okey, let's provide us with some information about the sought events.");
+    println!("Every condition is optional and can be omitted by leaving empty.");
+
+    let mut criteria = GetEventsCriteria::new();
+
+    println!("What's the title like? (provide any key part of it)");
+    let title = get_string_stripped()?;
+    if !title.is_empty() {
+        criteria = criteria.title_like(&title);
+    }
+
+    println!("What's the description like? (provide any key part of it)");
+    let description = get_string_stripped()?;
+    if !description.is_empty() {
+        criteria = criteria.description_like(&description);
+    }
+
+
+    println!("What's the oldest date and time to be queried? (format: YYYY-mm-dd HH:MM)");
+    let datetime_old = get_string_stripped()?;
+
+    println!("What's the newest date and time to be queried? (format: YYYY-mm-dd HH:MM)");
+    let datetime_new = get_string_stripped()?;
+
+    if !datetime.is_empty() {
+        let datetime = match NaiveDateTime::parse_from_str(&datetime[..], "%Y-%m-%d %H:%M") {
+            Ok(date) => date,
+            Err(_) => {
+                println!("Invalid date format: {}", date);
+                return Err(InterfaceError);
+            }
+        };
+    }
+
+    match get_user_events_by_criteria(&connection.pool, &get_test_user(), criteria) {
+        Ok(_) => {}
+        Err(_) => Err(InterfaceError)
+    }
+
     Ok(())
 }
 
 fn provide_new_event_info(connection: &Connection) -> Result<(), InterfaceError> {
-    let stdin = std::io::stdin();
-
     println!("Okey, let's provide us with required information about the event.");
     println!("What's gonna be a title?");
 
@@ -228,11 +277,7 @@ fn provide_new_event_info(connection: &Connection) -> Result<(), InterfaceError>
     println!("(Just strike return to leave it empty)");
 
     let mut description = String::new();
-    if let Err(_) = stdin.read_line(&mut description) {
-        return Err(InterfaceError);
-    }
-    description.truncate(description.trim_end().len());
-
+    readline_stripped(&mut description)?;
     let description = if description.is_empty() {
         None
     } else {
@@ -264,10 +309,9 @@ fn provide_new_event_info(connection: &Connection) -> Result<(), InterfaceError>
     let mut confirmation = String::new();
     while confirmation != "OK" && confirmation != "NO" {
         println!("Ready to confirm? If so, then enter 'OK' and press return. Else 'NO'");
-        if let Err(_) = stdin.read_line(&mut confirmation) {
+        if let Err(_) = readline_stripped(&mut confirmation) {
             return Err(InterfaceError);
         }
-        confirmation.truncate(confirmation.trim_end().len());
     }
     if confirmation == "OK" {
         if let Err(_) = add_event(&connection.pool, &get_test_user(), &new_event) {
