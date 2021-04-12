@@ -18,7 +18,7 @@ pub async fn delete_event_from_schedule(pool: &PgPool, id: &EventId) -> Result<(
 pub async fn clear_user_schedule(pool: &PgPool, user: &User) -> Result<(), Error> {
     query!(
         "DELETE FROM schedule
-        WHERE user = $1 ",
+        WHERE username = $1",
         user.get_username()
     )
     .execute(pool)
