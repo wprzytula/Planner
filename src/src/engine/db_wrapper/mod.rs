@@ -39,6 +39,7 @@ async fn disconnect(pool: &PgPool) {
 }
 
 pub mod event;
+pub mod schedule;
 pub mod user;
 
 #[cfg(test)]
