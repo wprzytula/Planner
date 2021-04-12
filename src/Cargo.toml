@@ -4,8 +4,9 @@ version = "0.1.0"
 authors = [
     "Adam Boguszewski <ab417730@students.mimuw.edu.pl>",
     "Maciej Herdon <mh418267@students.mimuw.edu.pl",
-    "Wojciech Przytuła <wp418383@students.mimuw.edu.pl>"
-] # [TODO]: Dopiszcie się misie pysie.
+    "Wojciech Przytuła <wp418383@students.mimuw.edu.pl>",
+    "Rafał Szulc <rs418393@students.mimuw.edu.pl>"
+]
 
 edition = "2018"
 
