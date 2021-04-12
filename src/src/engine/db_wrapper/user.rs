@@ -55,19 +55,16 @@ pub async fn insert_user(pool: &PgPool, user: &User) -> bool {
     return query.is_ok();
 }
 
-pub async fn delete_user(pool: &PgPool, user: &User) -> Option<Error> {
-    let query = sqlx::query!(
+pub async fn delete_user(pool: &PgPool, user: &User) -> Result<(), Error> {
+    sqlx::query!(
         "DELETE FROM users
         WHERE username = $1",
         user.username
     )
     .execute(pool)
-    .await;
+    .await?;
 
-    match query {
-        Ok(_) => None,
-        Err(error) => Some(error),
-    }
+    Ok(())
 }
 
 pub fn login(pool: &PgPool, username: &str, password: &str) -> Result<Option<User>, Error> {
@@ -110,8 +107,6 @@ pub(self) fn check_hash(password: &str, hash: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use crate::engine::db_wrapper::user::{check_hash, hash};
-    use djangohashers::check_password;
-
     #[test]
     fn test_good_hash() {
         let psw = "I Like Eating Salt :)";

@@ -4,6 +4,7 @@
 //          The following functions would be then methods of this struct.
 
 use crate::engine::db_wrapper::event::insert_event;
+use crate::engine::db_wrapper::schedule::delete_event_from_schedule;
 use chrono::Utc;
 use futures::executor::block_on;
 use sqlx::postgres::types::PgInterval;
@@ -116,7 +117,24 @@ pub fn add_event(pool: &PgPool, user: &User, event: &NewEventRequest) -> Result<
 }
 
 pub fn delete_event(pool: &PgPool, event_id: &EventId) -> Result<PgQueryResult, Error> {
-    block_on(db_wrapper::event::delete_by_id(pool, event_id))
+    begin_transaction(pool).unwrap();
+
+    return match block_on(delete_event_from_schedule(pool, event_id)) {
+        Ok(_) => match block_on(db_wrapper::event::delete_by_id(pool, event_id)) {
+            Ok(val) => {
+                end_transaction(pool).unwrap();
+                Ok(val)
+            }
+            Err(error) => {
+                rollback_transaction(pool).unwrap();
+                Err(error)
+            }
+        },
+        Err(error) => {
+            rollback_transaction(pool).unwrap();
+            Err(error)
+        }
+    };
 }
 
 pub fn modify_event(pool: &PgPool, request: EventModifyRequest) -> Result<PgQueryResult, Error> {

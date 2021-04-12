@@ -23,5 +23,10 @@ fn remove_nonexistent_event() {
     let event = block_on(event::insert_event(&pool, &event)).expect("Inserting failed.");
     block_on(event::delete_by_id(&pool, &event.id)).unwrap();
 
-    assert_eq!(block_on(event::delete_by_id(&pool, &event.id)).unwrap().rows_affected(), 0);
+    assert_eq!(
+        block_on(event::delete_by_id(&pool, &event.id))
+            .unwrap()
+            .rows_affected(),
+        0
+    );
 }
