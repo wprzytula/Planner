@@ -57,7 +57,6 @@ impl Event {
     }
 }
 
-// [TODO] Try making this more generic (not only for postgres).
 pub async fn get_event_by_id(pool: &PgPool, id: i32) -> Result<Event, Error> {
     let event = sqlx::query_as!(
         Event,
@@ -87,7 +86,7 @@ pub async fn insert_event(pool: &PgPool, event: &Event) -> Result<Event, Error> 
     .await?;
     Ok(new_event)
 }
-// [TODO] You know what :*
+
 pub async fn delete_by_id(pool: &PgPool, id: &i32) -> Result<PgQueryResult, Error> {
     let query = sqlx::query!(
         "DELETE FROM events

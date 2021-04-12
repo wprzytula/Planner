@@ -1,8 +1,5 @@
 /* Module with interface for engine for the Planner. */
 
-// [TODO]: Idea - create a new struct that will contain PgPool and logged user info.
-//          The following functions would be then methods of this struct.
-
 use crate::engine::db_wrapper::event::insert_event;
 use crate::engine::db_wrapper::schedule::{clear_user_schedule, delete_event_from_schedule};
 use crate::engine::db_wrapper::user::delete_user_from_database;
@@ -15,7 +12,6 @@ use sqlx::PgPool;
 // [fixme]: This probably should not be public.
 pub mod db_wrapper;
 
-// [fixme]: Temporary definitions.
 type Error = sqlx::Error;
 // For now let us assume that we give only user's username (I am not sure if it's safe).
 type User = db_wrapper::user::User;
@@ -87,11 +83,6 @@ impl GetEventsCriteria {
         self
     }
 }
-
-// [TODO]: Some functions would love to use transactions in DB.
-// [TODO]: Parameters and return types may change later!
-
-// TODO: make those encapsulated into Connection
 
 pub fn add_event(pool: &PgPool, user: &User, event: &NewEventRequest) -> Result<EventId, Error> {
     begin_transaction(pool)?;
