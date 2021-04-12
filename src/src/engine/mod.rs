@@ -32,6 +32,60 @@ pub struct EventModifyRequest {
     pub description: Option<Option<String>>,
 }
 
+// [TODO]: Add references and lifetimes instead of taking over the ownership.
+pub struct GetEventsCriteria {
+    pub title_like: Option<String>,
+    pub date_between: Option<(chrono::DateTime<Utc>, chrono::DateTime<Utc>)>,
+    pub duration_between: Option<(PgInterval, PgInterval)>,
+    pub creation_date_between: Option<(chrono::DateTime<Utc>, chrono::DateTime<Utc>)>,
+    pub description_like: Option<String>,
+}
+
+impl GetEventsCriteria {
+    pub fn new() -> GetEventsCriteria {
+        GetEventsCriteria {
+            title_like: None,
+            date_between: None,
+            duration_between: None,
+            creation_date_between: None,
+            description_like: None,
+        }
+    }
+
+    pub fn title_like(mut self, title: &str) -> GetEventsCriteria {
+        self.title_like = Some(String::from(title));
+        self
+    }
+
+    pub fn date_between(
+        mut self,
+        from: chrono::DateTime<Utc>,
+        to: chrono::DateTime<Utc>,
+    ) -> GetEventsCriteria {
+        self.date_between = Some((from, to));
+        self
+    }
+
+    pub fn duration_between(mut self, from: PgInterval, to: PgInterval) -> GetEventsCriteria {
+        self.duration_between = Some((from, to));
+        self
+    }
+
+    pub fn creation_date_between(
+        mut self,
+        from: chrono::DateTime<Utc>,
+        to: chrono::DateTime<Utc>,
+    ) -> GetEventsCriteria {
+        self.creation_date_between = Some((from, to));
+        self
+    }
+
+    pub fn description_like(mut self, desc: &str) -> GetEventsCriteria {
+        self.description_like = Some(String::from(desc));
+        self
+    }
+}
+
 // [TODO]: Some functions would love to use transactions in DB.
 // [TODO]: Parameters and return types may change later!
 
@@ -83,6 +137,19 @@ pub fn get_all_user_events(pool: &PgPool, user: &User) -> Result<Vec<Event>, Err
         )
         .fetch_all(pool),
     )
+}
+
+pub fn get_user_events_by_criteria(
+    pool: &PgPool,
+    user: &User,
+    criteria: GetEventsCriteria,
+) -> Result<Vec<Event>, Error> {
+    let events = block_on(db_wrapper::event::get_user_events_by_criteria(
+        pool,
+        user.get_username(),
+        criteria,
+    ))?;
+    Ok(events)
 }
 
 fn begin_transaction(pool: &PgPool) -> Result<(), Error> {

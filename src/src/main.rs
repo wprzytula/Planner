@@ -1,10 +1,14 @@
-use futures::executor::block_on;
-use planner::engine::db_wrapper::event::Event;
-use planner::engine::db_wrapper::user::User;
-use planner::engine::*;
+// use futures::executor::block_on;
+// use planner::engine::db_wrapper::event::Event;
+// use planner::engine::db_wrapper::user::User;
+// use planner::engine::*;
 
 fn main() {
-    planner::interface::mainloop();
+    let res = planner::interface::mainloop();
+    match res {
+        Ok(()) => (),
+        Err(_) => println!("Interface error occured."),
+    }
 }
 
 /*fn main2() {
