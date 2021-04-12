@@ -3,7 +3,7 @@ use planner::engine;
 use planner::engine::db_wrapper::event::Event;
 use planner::engine::db_wrapper::user::delete_user_from_database;
 use planner::engine::db_wrapper::{user, Connection};
-use planner::engine::{add_event, delete_event, delete_user};
+use planner::engine::{add_event, delete_event, delete_user, get_user_events_by_criteria, GetEventsCriteria};
 use sqlx::postgres::types::PgInterval;
 
 #[test]
@@ -115,4 +115,27 @@ fn find_event_by_duration() {
     assert_eq!(events.unwrap().len(), 0);
 
     delete_user(pool, &user).unwrap();
+}
+
+#[test]
+fn find_event_by_description() {
+    let connection = Connection::new().unwrap();
+    let pool = &connection.pool;
+
+    let user = user::User::new().username("description test searching").password("hahahah i have enough...");
+    assert!(block_on(user::insert_user(pool, &user)));
+
+    let event_empty = Event::new().date(chrono::Utc::now() + chrono::Duration::days(3));
+    let criteria_empty = engine::GetEventsCriteria::new();
+
+    add_event(pool, &user, &event_empty).unwrap();
+    let events = get_user_events_by_criteria(pool, &user, criteria_empty);
+    assert_eq!(events.unwrap().len(), 1);
+    let event_desc = Event::new().description(Option::from("Tesssting")).date(chrono::Utc::now() + chrono::Duration::days(342));
+    add_event(pool, &user, &event_desc).unwrap();
+
+    let criteria = GetEventsCriteria::new().description_like("Tess");
+    let events = get_user_events_by_criteria(pool, &user, criteria);
+    delete_user(pool, &user).unwrap();
+    assert_eq!(events.unwrap().len(), 2);
 }
