@@ -37,7 +37,7 @@ pub fn duration_from(months: u32, days: u32, hours: Hours, minutes: Minutes) -> 
     PgInterval {
         months: months as i32,
         days: days as i32,
-        microseconds: ((hours.0 as i64 * 60) + minutes.0 as i64) * 60 * 1000_000,
+        microseconds: ((hours.0 as i64 * 60) + minutes.0 as i64) * 60 * 1_000_000,
     }
 }
 

@@ -1,15 +1,16 @@
 // [TODO]: Interface of the Planner.
 
-// [TODO: remove this reminder
 use crate::engine::db_wrapper::event::{duration_from, Event, Hours, Minutes};
 use crate::engine::db_wrapper::user::get_test_user;
 use crate::engine::db_wrapper::Connection;
-use crate::engine::{add_event, get_all_user_events};
+use crate::engine::{
+    add_event, delete_event, get_all_user_events, get_user_event_by_id,
+    get_user_events_by_criteria, GetEventsCriteria,
+};
 use chrono::offset::LocalResult::Single;
 use chrono::{DateTime, FixedOffset, NaiveDate, NaiveDateTime, NaiveTime, TimeZone, Utc};
 use sqlx::postgres::types::PgInterval;
-/// Creating an engine for adding, removing, searching, displaying and
-/// modifying events.
+
 use std::io;
 use std::io::Write;
 
@@ -24,6 +25,17 @@ impl From<sqlx::Error> for InterfaceError {
 impl From<std::io::Error> for InterfaceError {
     fn from(_: std::io::Error) -> Self {
         InterfaceError
+    }
+}
+
+fn datetime_to_utc(datetime: &NaiveDateTime) -> Result<DateTime<Utc>, InterfaceError> {
+    let offset = FixedOffset::east(1 * 3600);
+    match offset.from_local_datetime(datetime) {
+        Single(dt) => Ok(Utc.from_utc_datetime(&dt.naive_utc())),
+        _ => {
+            println!("Date conversion error.");
+            return Err(InterfaceError);
+        }
     }
 }
 
@@ -48,7 +60,7 @@ pub fn mainloop() -> Result<(), InterfaceError> {
     let connection = Connection::new().expect("Failed to connect with Planner database! Exiting.");
 
     loop {
-        println!("What are you willing to do? Enter corresponding number.");
+        println!("\nWhat are you willing to do? Enter corresponding number.");
 
         println!("(0 or EOF) Quit.");
         println!("(1) View all events.");
@@ -84,10 +96,11 @@ pub fn mainloop() -> Result<(), InterfaceError> {
                     println!("Error occured while trying to add an event.");
                 }
             }
-            "4" => match choose_event_to_be_deleted(&connection) {
-                Ok(_) => println!("Successfully deleted an event."),
-                Err(_) => println!("Error occured while trying to delete an event."),
-            },
+            "4" => {
+                if let Err(_) = choose_event_to_be_deleted(&connection) {
+                    println!("Error occured while trying to delete an event.");
+                }
+            }
             _ => {
                 println!("Unspecified input");
             }
@@ -121,12 +134,73 @@ fn display_events(connection: &Connection) -> Result<(), InterfaceError> {
 }
 
 fn provide_search_conditions(connection: &Connection) -> Result<(), InterfaceError> {
+    println!("Okey, let's provide us with some information about the sought events.");
+    println!("Every condition is optional and can be omitted by leaving empty.");
+
+    let mut criteria = GetEventsCriteria::new();
+
+    println!("What's the title like? (provide any key part of it)");
+    let title = get_string_stripped()?;
+    if !title.is_empty() {
+        criteria = criteria.title_like(&title);
+    }
+
+    println!("What's the description like? (provide any key part of it)");
+    let description = get_string_stripped()?;
+    if !description.is_empty() {
+        criteria = criteria.description_like(&description);
+    }
+
+    println!("What's the oldest date and time to be queried? (format: YYYY-mm-dd HH:MM)");
+    let datetime_old = get_string_stripped()?;
+
+    let datetime_old = if !datetime_old.is_empty() {
+        match NaiveDateTime::parse_from_str(&datetime_old[..], "%Y-%m-%d %H:%M") {
+            Ok(dt) => datetime_to_utc(&dt)?,
+            Err(_) => {
+                println!("Invalid datetime format: {}", datetime_old);
+                return Err(InterfaceError);
+            }
+        }
+    } else {
+        chrono::offset::Utc.timestamp(0, 0)
+    };
+
+    println!("What's the newest date and time to be queried? (format: YYYY-mm-dd HH:MM)");
+    let datetime_new = get_string_stripped()?;
+
+    let datetime_new = if !datetime_new.is_empty() {
+        match NaiveDateTime::parse_from_str(&datetime_new[..], "%Y-%m-%d %H:%M") {
+            Ok(dt) => datetime_to_utc(&dt)?,
+            Err(_) => {
+                println!("Invalid datetime format: {}", datetime_new);
+                return Err(InterfaceError);
+            }
+        }
+    } else {
+        const SECS_TO_DISTANT_YEAR: i64 = 10000000000;
+        chrono::offset::Utc.timestamp(SECS_TO_DISTANT_YEAR, 0)
+    };
+
+    criteria = criteria.date_between(datetime_old, datetime_new);
+
+    match get_user_events_by_criteria(&connection.pool, &get_test_user(), criteria) {
+        Ok(events) => {
+            println!("These are results of your query:");
+            if events.is_empty() {
+                println!("Nothing here, apparently!")
+            }
+            for event in events {
+                println!("{}", event);
+            }
+        }
+        Err(_) => return Err(InterfaceError),
+    }
+
     Ok(())
 }
 
 fn provide_new_event_info(connection: &Connection) -> Result<(), InterfaceError> {
-    let stdin = std::io::stdin();
-
     println!("Okey, let's provide us with required information about the event.");
     println!("What's gonna be a title?");
 
@@ -161,17 +235,9 @@ fn provide_new_event_info(connection: &Connection) -> Result<(), InterfaceError>
         }
     };
 
-    let offset = FixedOffset::east(1 * 3600);
-
     let datetime = NaiveDateTime::new(date_p, time_p);
 
-    let datetime_utc: DateTime<Utc> = match offset.from_local_datetime(&datetime) {
-        Single(dt) => Utc.from_utc_datetime(&dt.naive_utc()),
-        _ => {
-            println!("Date conversion error.");
-            return Err(InterfaceError);
-        }
-    };
+    let datetime_utc = datetime_to_utc(&datetime)?;
 
     println!("How long is the event going to last?");
     println!("(Use numbers only)");
@@ -226,11 +292,7 @@ fn provide_new_event_info(connection: &Connection) -> Result<(), InterfaceError>
     println!("(Just strike return to leave it empty)");
 
     let mut description = String::new();
-    if let Err(_) = stdin.read_line(&mut description) {
-        return Err(InterfaceError);
-    }
-    description.truncate(description.trim_end().len());
-
+    readline_stripped(&mut description)?;
     let description = if description.is_empty() {
         None
     } else {
@@ -262,10 +324,9 @@ fn provide_new_event_info(connection: &Connection) -> Result<(), InterfaceError>
     let mut confirmation = String::new();
     while confirmation != "OK" && confirmation != "NO" {
         println!("Ready to confirm? If so, then enter 'OK' and press return. Else 'NO'");
-        if let Err(_) = stdin.read_line(&mut confirmation) {
+        if let Err(_) = readline_stripped(&mut confirmation) {
             return Err(InterfaceError);
         }
-        confirmation.truncate(confirmation.trim_end().len());
     }
     if confirmation == "OK" {
         if let Err(_) = add_event(&connection.pool, &get_test_user(), &new_event) {
@@ -286,6 +347,54 @@ fn choose_event_to_be_deleted(connection: &Connection) -> Result<(), InterfaceEr
     }
     for event in events {
         println!("Id: {}, title: {}", event.id, event.title);
+    }
+
+    println!("Enter id of the event you want to delete, EOF to cancel.");
+    let choice = match get_string_stripped() {
+        Ok(s) => {
+            if s.is_empty() {
+                return Ok(());
+            } else {
+                s
+            }
+        }
+        Err(_) => return Err(InterfaceError),
+    };
+
+    let id = match choice.parse::<i32>() {
+        Ok(c) => c,
+        Err(_) => {
+            println!("Invalid input - not a number.");
+            return Err(InterfaceError);
+        }
+    };
+
+    let to_delete = match get_user_event_by_id(&connection.pool, &get_test_user(), &id) {
+        Ok(event) => event,
+        Err(e) => {
+            println!("Error querying event with id {}: {:?}", id, e);
+            return Err(InterfaceError);
+        }
+    };
+    println!("{}", to_delete);
+    println!("Are you sure you want to delete the above event? ('OK' / any other input)");
+    let decision = match get_string_stripped() {
+        Ok(s) => match &s[..] {
+            "OK" => true,
+            _ => false,
+        },
+        Err(_) => return Err(InterfaceError),
+    };
+    if decision {
+        match delete_event(&connection.pool, &id) {
+            Ok(_) => println!("Successfully deleted the event."),
+            Err(e) => {
+                println!("{:?}", e);
+                return Err(InterfaceError);
+            }
+        };
+    } else {
+        println!("Cancelled deleting.")
     }
 
     Ok(())
