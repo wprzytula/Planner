@@ -6,16 +6,16 @@ use planner::engine::db_wrapper::Connection;
 fn check_login() {
     let connection = Connection::new();
     let pool = &connection.unwrap().pool;
-    let user = User::new().username("testerek").password("testek");
+    let username = "pswdds";
+    let password = "dasdasdasd";
+    let user = User::new().username(username).password(password);
 
     let insert = block_on(insert_user(&pool, &user));
-
     assert_eq!(insert, true);
 
-    login(&pool, "testerek", "testek")
+    login(&pool, username, password)
         .unwrap()
         .expect("Login returned none.");
-
     let delete = block_on(delete_user(&pool, &user));
 
     assert!(delete.is_none());

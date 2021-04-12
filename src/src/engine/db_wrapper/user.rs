@@ -6,7 +6,9 @@ pub(crate) fn get_test_user() -> User {
 
 use crate::engine::Error;
 use djangohashers::Algorithm::Argon2;
-use djangohashers::{check_password, make_password_with_algorithm, HasherError};
+use djangohashers::{
+    check_password, check_password_tolerant, make_password_with_algorithm, HasherError,
+};
 use futures::executor::block_on;
 use sqlx::PgPool;
 
@@ -54,7 +56,7 @@ pub async fn insert_user(pool: &PgPool, user: &User) -> bool {
     )
     .fetch_one(pool)
     .await;
-    //println!("{:#?}", query);
+    println!("{:#?}", query);
     return query.is_ok();
 }
 
@@ -74,14 +76,17 @@ pub async fn delete_user(pool: &PgPool, user: &User) -> Option<Error> {
 }
 
 pub fn login(pool: &PgPool, username: &str, password: &str) -> Result<Option<User>, Error> {
-    let hashed = hash(password);
-
     let user = block_on(get_password(pool, username))?;
+    if user.is_none() {
+        return Ok(None);
+    }
+    let user = user.unwrap();
+    let hashed = &user.password[..];
 
-    let result = check_hash(&hashed, &user.unwrap().password)?;
-
+    let result = check_hash(password, hashed);
+    println!("{}", result);
     if result {
-        return Ok(user);
+        return Ok(Some(user));
     }
     Ok(None)
 }
@@ -114,8 +119,8 @@ pub(self) fn hash(password: &str) -> String {
     hash
 }
 
-pub(self) fn check_hash(password: &str, hash: &str) -> Result<bool, HasherError> {
-    check_password(password, hash)
+pub(self) fn check_hash(password: &str, hash: &str) -> bool {
+    check_password_tolerant(password, hash)
 }
 
 #[cfg(test)]
@@ -126,14 +131,14 @@ mod tests {
     #[test]
     fn test_good_hash() {
         let psw = "I Like Eating Salt :)";
-        assert!(check_hash(psw, &*hash(psw)).unwrap());
+        assert!(check_hash(psw, &*hash(psw)));
     }
 
     #[test]
     fn check_uppercase() {
         let wrg_psw = "I Don't Like Eating Salt :(";
         let psw = "I Like Eating Salt :)";
-        assert!(!check_hash(wrg_psw, &*hash(psw)).unwrap());
-        assert!(!check_hash(psw, &*hash(wrg_psw)).unwrap());
+        assert!(!check_hash(wrg_psw, &*hash(psw)));
+        assert!(!check_hash(psw, &*hash(wrg_psw)));
     }
 }
