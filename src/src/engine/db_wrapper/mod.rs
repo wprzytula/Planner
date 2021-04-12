@@ -3,10 +3,10 @@ use futures::executor::block_on;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::PgPool;
 
-// [TODO] Move this somewhere higher?
+// [TODO] Move this to config file.
 const DB_URI: &str = "postgres://adam:adam2137@51.38.126.54:8237/adam";
 
-// TODO: add session info
+// [TODO]: Add session info.
 pub struct Connection {
     pub pool: PgPool,
 }
