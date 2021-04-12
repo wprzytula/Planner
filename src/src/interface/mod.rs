@@ -1,17 +1,20 @@
 // [TODO]: Interface of the Planner.
 
 // [TODO: remove this reminder
-use crate::engine::db_wrapper::event::{duration_from, Event, Hours, Minutes};
+use crate::engine::db_wrapper::event::{duration_from, Event, Hours, Minutes, get_event_by_id};
 use crate::engine::db_wrapper::user::get_test_user;
 use crate::engine::db_wrapper::Connection;
-use crate::engine::{add_event, get_all_user_events};
+use crate::engine::{add_event, get_all_user_events, delete_event, get_user_event_by_id};
 use chrono::offset::LocalResult::Single;
 use chrono::{DateTime, FixedOffset, NaiveDate, NaiveDateTime, NaiveTime, TimeZone, Utc};
 use sqlx::postgres::types::PgInterval;
-/// Creating an engine for adding, removing, searching, displaying and
-/// modifying events.
+
 use std::io;
 use std::io::Write;
+use std::num::ParseIntError;
+use futures::executor::block_on;
+use sqlx::Error;
+use sqlx::postgres::PgQueryResult;
 
 pub struct InterfaceError;
 
@@ -48,7 +51,7 @@ pub fn mainloop() -> Result<(), InterfaceError> {
     let connection = Connection::new().expect("Failed to connect with Planner database! Exiting.");
 
     loop {
-        println!("What are you willing to do? Enter corresponding number.");
+        println!("\nWhat are you willing to do? Enter corresponding number.");
 
         println!("(0 or EOF) Quit.");
         println!("(1) View all events.");
@@ -84,9 +87,8 @@ pub fn mainloop() -> Result<(), InterfaceError> {
                     println!("Error occured while trying to add an event.");
                 }
             }
-            "4" => match choose_event_to_be_deleted(&connection) {
-                Ok(_) => println!("Successfully deleted an event."),
-                Err(_) => println!("Error occured while trying to delete an event."),
+            "4" => if let Err(_) = choose_event_to_be_deleted(&connection) {
+                println!("Error occured while trying to delete an event.");
             },
             _ => {
                 println!("Unspecified input");
@@ -286,6 +288,54 @@ fn choose_event_to_be_deleted(connection: &Connection) -> Result<(), InterfaceEr
     }
     for event in events {
         println!("Id: {}, title: {}", event.id, event.title);
+    }
+
+    println!("Enter id of the event you want to delete, EOF to cancel.");
+    let choice = match get_string_stripped() {
+        Ok(s) => {
+            if s.is_empty() {
+                return Ok(());
+            } else {
+                s
+            }
+        }
+        Err(_) => return Err(InterfaceError),
+    };
+
+    let id = match choice.parse::<i32>() {
+        Ok(c) => c,
+        Err(_) => {
+            println!("Invalid input - not a number.");
+            return Err(InterfaceError);
+        }
+    };
+
+    let to_delete = match get_user_event_by_id(&connection.pool, &get_test_user(), &id) {
+        Ok(event) => event,
+        Err(e) => {
+            println!("Error querying event with id {}: {:?}", id, e);
+            return Err(InterfaceError);
+        }
+    };
+    println!("{}", to_delete);
+    println!("Are you sure you want to delete the above event? ('OK' / any other input)");
+    let decision = match get_string_stripped() {
+        Ok(s) => match &s[..] {
+            "OK" => true,
+            _ => false
+        },
+        Err(_) => return Err(InterfaceError)
+    };
+    if decision {
+        match delete_event(&connection.pool, &id) {
+            Ok(_) => println!("Successfully deleted the event."),
+            Err(e) => {
+                println!("{:?}", e);
+                return Err(InterfaceError)
+            }
+        };
+    } else {
+        println!("Cancelled deleting.")
     }
 
     Ok(())

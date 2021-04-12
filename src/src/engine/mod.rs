@@ -121,6 +121,11 @@ pub fn modify_event(pool: &PgPool, request: EventModifyRequest) -> Result<PgQuer
     block_on(db_wrapper::event::modify_event(pool, request))
 }
 
+// TODO: Check if queried event belongs to given user - crucial for security & privacy reasons
+pub fn get_user_event_by_id(pool: &PgPool, user: &User, event_id: &EventId) -> Result<Event, Error> {
+    block_on(db_wrapper::event::get_event_by_id(pool, *event_id))
+}
+
 pub fn get_all_user_events(pool: &PgPool, user: &User) -> Result<Vec<Event>, Error> {
     // [TODO]: Move to db_wrapper
     block_on(
