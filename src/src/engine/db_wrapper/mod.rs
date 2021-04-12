@@ -3,7 +3,7 @@ use sqlx::postgres::PgPoolOptions;
 use sqlx::PgPool;
 
 // [TODO] Move this somewhere higher?
-const DB_URI: &str = "postgres://51.38.126.54:8237/adam?user=adam&password=adam2137";
+const DB_URI: &str = "postgres://adam:adam2137@51.38.126.54:8237/adam";
 
 // TODO: add session info
 pub struct Connection {
