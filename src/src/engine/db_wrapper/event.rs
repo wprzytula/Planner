@@ -61,8 +61,8 @@ impl Event {
 pub async fn get_event_by_id(pool: &PgPool, id: i32) -> Result<Event, Error> {
     let event = sqlx::query_as!(
         Event,
-        "SELECT id, title, date, duration, creation_date, description \
-             FROM events \
+        "SELECT id, title, date, duration, creation_date, description
+             FROM events
              WHERE id = $1",
         id
     )
@@ -70,33 +70,7 @@ pub async fn get_event_by_id(pool: &PgPool, id: i32) -> Result<Event, Error> {
     .await?;
     Ok(event)
 }
-/*
-// [TODO] As above :3
-// [TODO] Some fancy builder pattern?
-pub async fn insert_event(
-    pool: &PgPool,
-    title: &str,
-    date: &chrono::DateTime<Utc>,
-    duration: &PgInterval,
-    description: Option<String>,
-) -> Result<Event, sqlx::Error> {
-    let event = sqlx::query_as!(
-        Event,
-        "INSERT INTO events(title, date, duration, creation_date, description)
-             VALUES($1, $2, $3, $4, $5)
-             RETURNING *",
-        title,
-        date,
-        duration,
-        chrono::offset::Utc::now(),
-        description
-    )
-    .fetch_one(pool)
-    .await?;
-    Ok(event)
-}
-*/
-// Because of function signatures in engine/mod.rs written by Adam.
+
 pub async fn insert_event(pool: &PgPool, event: &Event) -> Result<Event, Error> {
     let new_event = sqlx::query_as!(
         Event,
@@ -209,8 +183,8 @@ pub async fn modify_event(
 ) -> Result<PgQueryResult, Error> {
     let event = sqlx::query_as!(
         Event,
-        "SELECT id, title, date, duration, creation_date, description \
-             FROM events \
+        "SELECT id, title, date, duration, creation_date, description
+             FROM events
              WHERE id = $1",
         request.id
     )
@@ -220,8 +194,8 @@ pub async fn modify_event(
     let new_event = set_update_info(request, event);
 
     let query = sqlx::query!(
-        "UPDATE events \
-            SET title = $2, date = $3, duration = $4, creation_date = $5, description = $6\
+        "UPDATE events
+            SET title = $2, date = $3, duration = $4, creation_date = $5, description = $6
             WHERE id = $1",
         new_event.id,
         new_event.title,

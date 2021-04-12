@@ -6,9 +6,7 @@ pub(crate) fn get_test_user() -> User {
 
 use crate::engine::Error;
 use djangohashers::Algorithm::Argon2;
-use djangohashers::{
-    check_password, check_password_tolerant, make_password_with_algorithm, HasherError,
-};
+use djangohashers::{check_password_tolerant, make_password_with_algorithm};
 use futures::executor::block_on;
 use sqlx::PgPool;
 
@@ -17,9 +15,6 @@ pub struct User {
     username: String,
     password: String,
 }
-
-// In my opinion the builder pattern will be perfect if we will add something
-// to the User struct.
 
 impl User {
     pub fn get_username(&self) -> &String {
@@ -103,20 +98,9 @@ async fn get_password(pool: &PgPool, username: &str) -> Result<Option<User>, Err
     .await?;
     Ok(user)
 }
-/*
+
 pub(self) fn hash(password: &str) -> String {
-    let mut hasher = Sha256::new();
-
-    hasher.update(password);
-
-    let hash_string = format!("{:X}", hasher.finalize());
-
-    hash_string
-}
-*/
-pub(self) fn hash(password: &str) -> String {
-    let hash = make_password_with_algorithm(password, Argon2);
-    hash
+    make_password_with_algorithm(password, Argon2)
 }
 
 pub(self) fn check_hash(password: &str, hash: &str) -> bool {
