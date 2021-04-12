@@ -119,7 +119,7 @@ mod tests {
     }
 
     #[test]
-    fn check_uppercase() {
+    fn test_bad_hash() {
         let wrg_psw = "I Don't Like Eating Salt :(";
         let psw = "I Like Eating Salt :)";
         assert!(!check_hash(wrg_psw, &*hash(psw)));
