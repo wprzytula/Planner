@@ -1,5 +1,5 @@
 use futures::executor::block_on;
-use planner::engine::db_wrapper::user::{delete_user, insert_user, login, User};
+use planner::engine::db_wrapper::user::{delete_user_from_database, insert_user, login, User};
 use planner::engine::db_wrapper::Connection;
 
 #[test]
@@ -16,7 +16,7 @@ fn check_login() {
     login(&pool, username, password)
         .unwrap()
         .expect("Login returned none.");
-    let delete = block_on(delete_user(&pool, &user));
+    let delete = block_on(delete_user_from_database(&pool, &user));
 
     assert!(delete.is_ok());
 }
@@ -35,7 +35,7 @@ fn check_wrong_login() {
 
     assert!(login(&pool, username, wrong_password).unwrap().is_none());
 
-    let delete = block_on(delete_user(&pool, &user));
+    let delete = block_on(delete_user_from_database(&pool, &user));
 
     assert!(delete.is_ok());
 }

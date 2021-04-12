@@ -1,7 +1,7 @@
 use futures::executor::block_on;
 use planner::engine;
 use planner::engine::db_wrapper::event::Event;
-use planner::engine::db_wrapper::user::delete_user;
+use planner::engine::db_wrapper::user::delete_user_from_database;
 use planner::engine::db_wrapper::{user, Connection};
 use planner::engine::{add_event, delete_event};
 
@@ -45,5 +45,5 @@ fn find_event_by_date() {
     assert_eq!(events.len(), 1);
 
     delete_event(pool, &added).unwrap();
-    block_on(delete_user(pool, &user)).unwrap();
+    block_on(delete_user_from_database(pool, &user)).unwrap();
 }

@@ -55,7 +55,7 @@ pub async fn insert_user(pool: &PgPool, user: &User) -> bool {
     return query.is_ok();
 }
 
-pub async fn delete_user(pool: &PgPool, user: &User) -> Result<(), Error> {
+pub async fn delete_user_from_database(pool: &PgPool, user: &User) -> Result<(), Error> {
     sqlx::query!(
         "DELETE FROM users
         WHERE username = $1",
