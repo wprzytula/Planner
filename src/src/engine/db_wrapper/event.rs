@@ -3,8 +3,44 @@ use chrono::{TimeZone, Utc};
 use sqlx::postgres::types::PgInterval;
 use sqlx::postgres::PgQueryResult;
 use sqlx::PgPool;
+use std::arch::x86_64::_mm_test_all_ones;
+use std::fmt;
 
 const SECS_TO_DISTANT_YEAR: i64 = 10000000000;
+
+pub struct ConversionError;
+
+pub struct Hours(u32);
+
+pub struct Minutes(u32);
+
+impl Hours {
+    pub fn new(hours: u32) -> Result<Self, ConversionError> {
+        if hours < 24 {
+            Ok(Self(hours))
+        } else {
+            Err(ConversionError)
+        }
+    }
+}
+
+impl Minutes {
+    pub fn new(minutes: u32) -> Result<Self, ConversionError> {
+        if minutes < 60 {
+            Ok(Self(minutes))
+        } else {
+            Err(ConversionError)
+        }
+    }
+}
+
+pub fn duration_from(months: u32, days: u32, hours: Hours, minutes: Minutes) -> PgInterval {
+    PgInterval {
+        months: months as i32,
+        days: days as i32,
+        microseconds: ((hours.0 as i64 * 60) + minutes.0 as i64) * 60 * 1000_000,
+    }
+}
 
 #[derive(Debug)]
 pub struct Event {
@@ -20,7 +56,7 @@ impl Event {
     pub fn new() -> Event {
         Event {
             id: 0,
-            title: "".to_string(),
+            title: String::new(),
             date: chrono::offset::Utc::now(),
             duration: PgInterval {
                 months: 0,
@@ -50,10 +86,44 @@ impl Event {
         self
     }
 
-    pub fn description(mut self, description: &str) -> Event {
-        self.description = Some(String::from(description));
+    pub fn description(mut self, description: Option<&str>) -> Event {
+        self.description = match description {
+            None => None,
+            Some(desc) => Some(String::from(desc)),
+        };
 
         self
+    }
+}
+
+impl fmt::Display for Event {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let hours = self.duration.microseconds / (1000 * 60 * 60);
+        let minutes = self.duration.microseconds % (1000 * 60 * 60) / (1000 * 60);
+        write!(
+            f,
+            "EVENT:\n\
+                   id:\t{}\n\
+                   title:\t{}\n\
+                   creation date:\t{}\n\
+                   date:\t{}\n\
+                   duration:\t{} months, {} days, {} hours, {} minutes\n\
+                   description: {}\n
+                   ",
+            self.id,
+            self.title,
+            self.creation_date,
+            self.date,
+            self.duration.months,
+            self.duration.days,
+            hours,
+            minutes,
+            if let Some(d) = &self.description {
+                d
+            } else {
+                "<no description>"
+            }
+        )
     }
 }
 
