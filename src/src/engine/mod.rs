@@ -140,12 +140,16 @@ pub fn get_all_user_events(pool: &PgPool, user: &User) -> Result<Vec<Event>, Err
 }
 
 pub fn get_user_events_by_criteria(
-    _pool: &PgPool,
-    _user: &User,
-    _criteria: GetEventsCriteria,
+    pool: &PgPool,
+    user: &User,
+    criteria: GetEventsCriteria,
 ) -> Result<Vec<Event>, Error> {
-
-    Ok(Vec::new())
+    let events = block_on(db_wrapper::event::get_user_events_by_criteria(
+        pool,
+        user.get_username(),
+        criteria,
+    ))?;
+    Ok(events)
 }
 
 fn begin_transaction(pool: &PgPool) -> Result<(), Error> {

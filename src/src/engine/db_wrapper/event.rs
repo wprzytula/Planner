@@ -1,8 +1,10 @@
 use crate::engine::{Error, EventModifyRequest, GetEventsCriteria};
-use chrono::{Utc, TimeZone};
+use chrono::{TimeZone, Utc};
 use sqlx::postgres::types::PgInterval;
 use sqlx::postgres::PgQueryResult;
 use sqlx::PgPool;
+
+const SECS_TO_DISTANT_YEAR: i64 = 10000000000;
 
 #[derive(Debug)]
 pub struct Event {
@@ -137,23 +139,40 @@ pub async fn get_user_events_by_criteria(
 ) -> Result<Vec<Event>, Error> {
     let title = match criteria.title_like {
         Some(str) => str,
-        None => String::new()
+        None => String::new(),
     };
     let date = match criteria.date_between {
         Some(dates) => dates,
-        None => (chrono::offset::Utc.timestamp(0, 0), chrono::offset::Utc.timestamp(std::i64::MAX, 0))
+        None => (
+            chrono::offset::Utc.timestamp(0, 0),
+            chrono::offset::Utc.timestamp(SECS_TO_DISTANT_YEAR, 0),
+        ),
     };
     let duration = match criteria.duration_between {
         Some(durations) => durations,
-        None => (PgInterval {months: 0, days: 0, microseconds: 0}, PgInterval {months: 12000, days: 0, microseconds: 0})
+        None => (
+            PgInterval {
+                months: 0,
+                days: 0,
+                microseconds: 0,
+            },
+            PgInterval {
+                months: 12000,
+                days: 0,
+                microseconds: 0,
+            },
+        ),
     };
     let creation_date = match criteria.creation_date_between {
         Some(dates) => dates,
-        None => (chrono::offset::Utc.timestamp(0, 0), chrono::offset::Utc.timestamp(std::i64::MAX, 0))
+        None => (
+            chrono::offset::Utc.timestamp(0, 0),
+            chrono::offset::Utc.timestamp(SECS_TO_DISTANT_YEAR, 0),
+        ),
     };
     let description = match criteria.description_like {
         Some(str) => str,
-        None => String::new()
+        None => String::new(),
     };
 
     let events = sqlx::query_as!(
@@ -167,15 +186,20 @@ pub async fn get_user_events_by_criteria(
                 AND date BETWEEN $3 AND $4
                 AND duration BETWEEN $5 AND $6
                 AND creation_date BETWEEN $7 AND $8
-                AND description LIKE '%' || $9 || '%'",
+                AND (description IS NULL
+                     OR description LIKE '%' || $9 || '%')",
         user,
         title,
-        date.0, date.1,
-        duration.0, duration.1,
-        creation_date.0, creation_date.1,
+        date.0,
+        date.1,
+        duration.0,
+        duration.1,
+        creation_date.0,
+        creation_date.1,
         description
-    ).fetch_all(pool)
-        .await?;
+    )
+    .fetch_all(pool)
+    .await?;
     Ok(events)
 }
 
