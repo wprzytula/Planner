@@ -59,6 +59,5 @@ fn check_delete_user() {
 
     delete_user(pool, &user).unwrap();
 
-    //let added = add_event(pool, &user, &event).unwrap();
     assert_eq!(get_all_user_events(pool, &user).unwrap().len(), 0);
 }
