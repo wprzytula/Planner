@@ -12,12 +12,12 @@ use sqlx::PgPool;
 // [fixme]: This probably should not be public.
 pub mod db_wrapper;
 
-type Error = sqlx::Error;
+pub type Error = sqlx::Error;
 // For now let us assume that we give only user's username (I am not sure if it's safe).
-type User = db_wrapper::user::User;
+pub type User = db_wrapper::user::User;
 
 // This should be replaced with DTO or other temporary structure.
-type NewEventRequest = db_wrapper::event::Event;
+pub type NewEventRequest = db_wrapper::event::Event;
 type Event = db_wrapper::event::Event;
 type EventId = i32;
 
