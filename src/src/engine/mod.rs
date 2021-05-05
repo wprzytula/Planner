@@ -157,7 +157,7 @@ pub fn modify_event(pool: &PgPool, request: &EventModifyRequest) -> Result<PgQue
 // TODO: Check if queried event belongs to given user - crucial for security & privacy reasons
 pub fn get_user_event_by_id(
     pool: &PgPool,
-    user: &User,
+    _user: &User,
     event_id: &EventId,
 ) -> Result<Event, Error> {
     block_on(db_wrapper::event::get_event_by_id(pool, *event_id))

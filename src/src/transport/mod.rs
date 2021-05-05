@@ -18,6 +18,7 @@ pub enum RequestType {
     NewEvent(NewEventRequest),
     DeleteEvent(EventId),
     ModifyEvent(EventModifyRequest),
+    GetUserEventById(EventId),
     GetUserEventsByCriteria(GetEventsCriteria),
     // Not implemented:
     // delete_user (do we need this?)
@@ -61,15 +62,16 @@ pub fn handle_request(pool: &PgPool, request: &PlannerRequest) -> Result<ReturnT
             Ok(ReturnType::None)
         },
         RequestType::ModifyEvent(req) => {
-            engine::modify_event(pool, req);
+            engine::modify_event(pool, req)?;
             Ok(ReturnType::None)
         },
+        RequestType::GetUserEventById(id) => {
+            let res = engine::get_user_event_by_id(pool, &user, id)?;
+            Ok(ReturnType::SingleEvent(res))
+        }
         RequestType::GetUserEventsByCriteria(criteria) => {
             let res = engine::get_user_events_by_criteria(pool, &user, criteria)?;
             Ok(ReturnType::ManyEvents(res))
-        }
-        _ => {
-            Ok(ReturnType::None)
-        }
+        },
     }
 }
