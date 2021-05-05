@@ -16,10 +16,18 @@ pub enum RequestType {
     DeleteEvent(EventId),
     ModifyEvent(EventModifyRequest)
     // Not implemented:
-    // delete_user
+    // delete_user (do we need this?)
     // get_user_event_by_id
     // get_all_user_event
     // get_user_events_by_criteria
+}
+
+pub type Event = engine::Event;
+
+pub enum ReturnType {
+    None,
+    SingleEvent(Event),
+    ManyEvents(Vec<Event>)
 }
 
 pub struct PlannerRequest {
@@ -29,27 +37,27 @@ pub struct PlannerRequest {
 }
 
 // This function will be used by client, PgPool should be removed later.
-pub fn send_request(pool: &PgPool, request: &PlannerRequest) -> Result<(), Error> {
+pub fn send_request(pool: &PgPool, request: &PlannerRequest) -> Result<ReturnType, Error> {
     handle_request(pool, request)
 }
 
 // This function will be used by server after receiving a request,
 // so we can pass PgPool here (because server will also do this).
-pub fn handle_request(pool: &PgPool, request: &PlannerRequest) -> Result<(), Error> {
+pub fn handle_request(pool: &PgPool, request: &PlannerRequest) -> Result<ReturnType, Error> {
     match &request.request_type {
         RequestType::NewEvent(req) => {
             let user = engine::User::new()
                 .username(&request.author_username).password("test");
             engine::add_event(pool, &user, &req)?;
-            Ok(())
+            Ok(ReturnType::None)
         },
         RequestType::DeleteEvent(id) => {
             engine::delete_event(pool, id)?;
-            Ok(())
+            Ok(ReturnType::None)
         },
         RequestType::ModifyEvent(req) => {
             engine::modify_event(pool, req);
-            Ok(())
+            Ok(ReturnType::None)
         },
         _ => {
             Ok(())
