@@ -150,7 +150,7 @@ pub fn delete_user(pool: &PgPool, user: &User) -> Result<(), Error> {
     };
 }
 
-pub fn modify_event(pool: &PgPool, request: EventModifyRequest) -> Result<PgQueryResult, Error> {
+pub fn modify_event(pool: &PgPool, request: &EventModifyRequest) -> Result<PgQueryResult, Error> {
     block_on(db_wrapper::event::modify_event(pool, request))
 }
 

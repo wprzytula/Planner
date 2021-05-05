@@ -1,14 +1,25 @@
 use crate::engine;
 use engine::Error;
 use sqlx::PgPool;
-use crate::engine::delete_event;
+
+// HOW TO CREATE A NEW ENGINE FUNCTION:
+// 1. Add a new public request type or choose an existing one.
+// 2. Add a new enum type (obligatory).
+// 3. Add a new branch in the handle_request function.
 
 pub type NewEventRequest = engine::NewEventRequest;
 pub type EventId = engine::EventId;
+pub type EventModifyRequest = engine::EventModifyRequest;
 
 pub enum RequestType {
     NewEvent(NewEventRequest),
-    DeleteEvent(EventId)
+    DeleteEvent(EventId),
+    ModifyEvent(EventModifyRequest)
+    // Not implemented:
+    // delete_user
+    // get_user_event_by_id
+    // get_all_user_event
+    // get_user_events_by_criteria
 }
 
 pub struct PlannerRequest {
@@ -33,7 +44,11 @@ pub fn handle_request(pool: &PgPool, request: &PlannerRequest) -> Result<(), Err
             Ok(())
         },
         RequestType::DeleteEvent(id) => {
-            delete_event(pool, id)?;
+            engine::delete_event(pool, id)?;
+            Ok(())
+        },
+        RequestType::ModifyEvent(req) => {
+            engine::modify_event(pool, req);
             Ok(())
         },
         _ => {

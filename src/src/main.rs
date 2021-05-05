@@ -1,11 +1,4 @@
 use planner::transport::*;
-use chrono::{DateTime, Utc};
-use std::ops::Sub;
-use sqlx::postgres::types::PgInterval;
-use planner::engine::db_wrapper::event::{duration_from, Hours, Minutes, ConversionError};
-use futures::executor::block_on;
-use planner::engine::db_wrapper::Connection;
-use sqlx::Error;
 
 fn main() {
     // let res = planner::interface::mainloop();
@@ -24,5 +17,5 @@ fn main() {
         author_username: String::from("testuser"),
     };
 
-    let res = planner::transport::send_request(&c.pool, &request);
+    let _res = planner::transport::send_request(&c.pool, &request);
 }

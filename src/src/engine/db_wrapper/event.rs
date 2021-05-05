@@ -275,7 +275,7 @@ pub async fn get_user_events_by_criteria(
 
 pub async fn modify_event(
     pool: &PgPool,
-    request: EventModifyRequest,
+    request: &EventModifyRequest,
 ) -> Result<PgQueryResult, Error> {
     let event = sqlx::query_as!(
         Event,
@@ -305,27 +305,27 @@ pub async fn modify_event(
     Ok(query)
 }
 
-async fn set_update_info(request: EventModifyRequest, event: Event) -> Event {
+async fn set_update_info(request: &EventModifyRequest, event: Event) -> Event {
     Event {
         id: request.id,
-        title: match request.title {
-            Some(title) => title,
+        title: match &request.title {
+            Some(title) => title.clone(),
             None => event.title,
         },
-        date: match request.date {
-            Some(date) => date,
+        date: match &request.date {
+            Some(date) => date.clone(),
             None => event.date,
         },
-        duration: match request.duration {
-            Some(duration) => duration,
+        duration: match &request.duration {
+            Some(duration) => duration.clone(),
             None => event.duration,
         },
-        creation_date: match request.creation_date {
-            Some(creation_date) => creation_date,
+        creation_date: match &request.creation_date {
+            Some(creation_date) => creation_date.clone(),
             None => event.creation_date,
         },
-        description: match request.description {
-            Some(description) => description,
+        description: match &request.description {
+            Some(description) => description.clone(),
             None => event.description,
         },
     }
