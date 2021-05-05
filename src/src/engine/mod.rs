@@ -173,7 +173,7 @@ pub fn get_all_user_events(pool: &PgPool, user: &User) -> Result<Vec<Event>, Err
 pub fn get_user_events_by_criteria(
     pool: &PgPool,
     user: &User,
-    criteria: GetEventsCriteria,
+    criteria: &GetEventsCriteria,
 ) -> Result<Vec<Event>, Error> {
     let events = block_on(db_wrapper::event::get_user_events_by_criteria(
         pool,

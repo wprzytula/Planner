@@ -205,44 +205,46 @@ pub async fn get_all_user_events(pool: &PgPool, user: &str) -> Result<Vec<Event>
 pub async fn get_user_events_by_criteria(
     pool: &PgPool,
     user: &str,
-    criteria: GetEventsCriteria,
+    criteria: &GetEventsCriteria,
 ) -> Result<Vec<Event>, Error> {
-    let title = match criteria.title_like {
+    // [TODO]: Change these to static, I couldn't figure it out.
+    let base_string: String = String::new();
+    let base_date: (chrono::DateTime<Utc>, chrono::DateTime<Utc>) = (
+        chrono::offset::Utc.timestamp(0, 0),
+        chrono::offset::Utc.timestamp(SECS_TO_DISTANT_YEAR, 0),
+    );
+    let base_duration: (PgInterval, PgInterval) = (
+        PgInterval {
+            months: 0,
+            days: 0,
+            microseconds: 0,
+        },
+        PgInterval {
+            months: 12000,
+            days: 0,
+            microseconds: 0,
+        },
+    );
+
+    let title = match &criteria.title_like {
         Some(str) => str,
-        None => String::new(),
+        None => &base_string,
     };
-    let date = match criteria.date_between {
+    let date = match &criteria.date_between {
         Some(dates) => dates,
-        None => (
-            chrono::offset::Utc.timestamp(0, 0),
-            chrono::offset::Utc.timestamp(SECS_TO_DISTANT_YEAR, 0),
-        ),
+        None => &base_date,
     };
-    let duration = match criteria.duration_between {
+    let duration = match &criteria.duration_between {
         Some(durations) => durations,
-        None => (
-            PgInterval {
-                months: 0,
-                days: 0,
-                microseconds: 0,
-            },
-            PgInterval {
-                months: 12000,
-                days: 0,
-                microseconds: 0,
-            },
-        ),
+        None => &base_duration,
     };
-    let creation_date = match criteria.creation_date_between {
+    let creation_date = match &criteria.creation_date_between {
         Some(dates) => dates,
-        None => (
-            chrono::offset::Utc.timestamp(0, 0),
-            chrono::offset::Utc.timestamp(SECS_TO_DISTANT_YEAR, 0),
-        ),
+        None => &base_date,
     };
-    let description = match criteria.description_like {
+    let description = match &criteria.description_like {
         Some(str) => str,
-        None => String::new(),
+        None => &base_string,
     };
 
     let events = sqlx::query_as!(
