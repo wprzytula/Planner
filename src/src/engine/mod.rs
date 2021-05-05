@@ -19,7 +19,7 @@ pub type User = db_wrapper::user::User;
 // This should be replaced with DTO or other temporary structure.
 pub type NewEventRequest = db_wrapper::event::Event;
 type Event = db_wrapper::event::Event;
-type EventId = i32;
+pub type EventId = i32;
 
 pub struct EventModifyRequest {
     pub id: i32,

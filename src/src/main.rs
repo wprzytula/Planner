@@ -1,4 +1,4 @@
-use planner::transport::RequestType;
+use planner::transport::*;
 use chrono::{DateTime, Utc};
 use std::ops::Sub;
 use sqlx::postgres::types::PgInterval;
@@ -14,33 +14,15 @@ fn main() {
     //     Err(_) => println!("Interface error occured."),
     // }
 
-    let pool = planner::engine::db_wrapper::Connection::new();
-    let c = match pool {
-        Ok(c) => {c}
-        Err(_) => {panic!("conn")}
-    };
+    let c = planner::engine::db_wrapper::Connection::new();
+    let c = c.unwrap();
 
-    let hours = Hours::new(23);
-    let hours = match hours {
-        Ok(h) => {h}
-        Err(err) => {panic!("hours error")}
-    };
-
-    let minutes = Minutes::new(12);
-    let minutes = match minutes {
-        Ok(m) => {m}
-        Err(err) => {panic!("minutes error")}
-    };
-
-    let req = planner::engine::NewEventRequest::new()
-        .title("test")
-        .date(chrono::offset::Utc::now() + chrono::Duration::days(2))
-        .duration(duration_from(1, 1, hours, minutes));
+    let id : planner::transport::EventId = 2;
 
     let request = planner::transport::PlannerRequest {
-        request_type: RequestType::NewEvent(req),
+        request_type: RequestType::DeleteEvent(id),
         author_username: String::from("testuser"),
     };
 
-    let res = planner::transport::handle_request(&c.pool, &request);
+    let res = planner::transport::send_request(&c.pool, &request);
 }
