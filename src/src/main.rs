@@ -10,7 +10,7 @@ fn main() {
     let c = planner::engine::db_wrapper::Connection::new();
     let c = c.unwrap();
 
-    let id : planner::transport::EventId = 2;
+    let id: planner::transport::EventId = 2;
 
     let request = planner::transport::PlannerRequest {
         request_type: RequestType::DeleteEvent(id),

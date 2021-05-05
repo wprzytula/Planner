@@ -3,7 +3,9 @@ use planner::engine;
 use planner::engine::db_wrapper::event::Event;
 use planner::engine::db_wrapper::user::delete_user_from_database;
 use planner::engine::db_wrapper::{user, Connection};
-use planner::engine::{add_event, delete_event, delete_user, get_user_events_by_criteria, GetEventsCriteria};
+use planner::engine::{
+    add_event, delete_event, delete_user, get_user_events_by_criteria, GetEventsCriteria,
+};
 use sqlx::postgres::types::PgInterval;
 
 #[test]
@@ -20,7 +22,7 @@ fn find_event_by_date() {
     let to = from + chrono::Duration::days(10);
     let criteria = engine::GetEventsCriteria::new().date_between(from, to);
 
-    let events = engine::get_user_events_by_criteria(pool, &user, criteria).unwrap();
+    let events = engine::get_user_events_by_criteria(pool, &user, &criteria).unwrap();
     assert!(events.is_empty());
 
     let event = Event::new()
@@ -30,7 +32,7 @@ fn find_event_by_date() {
     let added = add_event(pool, &user, &event).unwrap();
     let criteria = engine::GetEventsCriteria::new().date_between(from, to);
 
-    let events = engine::get_user_events_by_criteria(pool, &user, criteria).unwrap();
+    let events = engine::get_user_events_by_criteria(pool, &user, &criteria).unwrap();
     assert_eq!(events.len(), 1);
 
     delete_event(pool, &added).unwrap();
@@ -80,7 +82,7 @@ fn find_event_by_duration() {
     add_event(pool, &user, &event).unwrap();
 
     let criteria = engine::GetEventsCriteria::new().duration_between(min, max);
-    let events = engine::get_user_events_by_criteria(pool, &user, criteria);
+    let events = engine::get_user_events_by_criteria(pool, &user, &criteria);
     assert_eq!(events.unwrap().len(), 1);
 
     let max = PgInterval {
@@ -89,7 +91,7 @@ fn find_event_by_duration() {
         microseconds: 0,
     };
     let criteria = engine::GetEventsCriteria::new().duration_between(bad_min, max);
-    let events = engine::get_user_events_by_criteria(pool, &user, criteria);
+    let events = engine::get_user_events_by_criteria(pool, &user, &criteria);
     assert_eq!(events.unwrap().len(), 0);
 
     let min = PgInterval {
@@ -99,7 +101,7 @@ fn find_event_by_duration() {
     };
 
     let criteria = engine::GetEventsCriteria::new().duration_between(min, bad_max);
-    let events = engine::get_user_events_by_criteria(pool, &user, criteria);
+    let events = engine::get_user_events_by_criteria(pool, &user, &criteria);
     assert_eq!(events.unwrap().len(), 0);
 
     delete_user(pool, &user).unwrap();
@@ -110,20 +112,24 @@ fn find_event_by_description() {
     let connection = Connection::new().unwrap();
     let pool = &connection.pool;
 
-    let user = user::User::new().username("description test searching").password("hahahah i have enough...");
+    let user = user::User::new()
+        .username("description test searching")
+        .password("hahahah i have enough...");
     assert!(block_on(user::insert_user(pool, &user)));
 
     let event_empty = Event::new().date(chrono::Utc::now() + chrono::Duration::days(3));
     let criteria_empty = engine::GetEventsCriteria::new();
 
     add_event(pool, &user, &event_empty).unwrap();
-    let events = get_user_events_by_criteria(pool, &user, criteria_empty);
+    let events = get_user_events_by_criteria(pool, &user, &criteria_empty);
     assert_eq!(events.unwrap().len(), 1);
-    let event_desc = Event::new().description(Option::from("Tesssting")).date(chrono::Utc::now() + chrono::Duration::days(342));
+    let event_desc = Event::new()
+        .description(Option::from("Tesssting"))
+        .date(chrono::Utc::now() + chrono::Duration::days(342));
     add_event(pool, &user, &event_desc).unwrap();
 
     let criteria = GetEventsCriteria::new().description_like("Tess");
-    let events = get_user_events_by_criteria(pool, &user, criteria);
+    let events = get_user_events_by_criteria(pool, &user, &criteria);
     delete_user(pool, &user).unwrap();
     assert_eq!(events.unwrap().len(), 2);
 }

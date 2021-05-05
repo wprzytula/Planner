@@ -22,7 +22,6 @@ pub enum RequestType {
     GetUserEventsByCriteria(GetEventsCriteria),
     // Not implemented:
     // delete_user (do we need this?)
-    // get_user_event_by_id
     // get_all_user_event
 }
 
@@ -31,7 +30,7 @@ pub type Event = engine::Event;
 pub enum ReturnType {
     None,
     SingleEvent(Event),
-    ManyEvents(Vec<Event>)
+    ManyEvents(Vec<Event>),
 }
 
 pub struct PlannerRequest {
@@ -50,21 +49,22 @@ pub fn send_request(pool: &PgPool, request: &PlannerRequest) -> Result<ReturnTyp
 pub fn handle_request(pool: &PgPool, request: &PlannerRequest) -> Result<ReturnType, Error> {
     // [TODO]: This user struct should have some additional validation info.
     let user = engine::User::new()
-        .username(&request.author_username).password("test");
+        .username(&request.author_username)
+        .password("test");
 
     match &request.request_type {
         RequestType::NewEvent(req) => {
             engine::add_event(pool, &user, &req)?;
             Ok(ReturnType::None)
-        },
+        }
         RequestType::DeleteEvent(id) => {
             engine::delete_event(pool, id)?;
             Ok(ReturnType::None)
-        },
+        }
         RequestType::ModifyEvent(req) => {
             engine::modify_event(pool, req)?;
             Ok(ReturnType::None)
-        },
+        }
         RequestType::GetUserEventById(id) => {
             let res = engine::get_user_event_by_id(pool, &user, id)?;
             Ok(ReturnType::SingleEvent(res))
@@ -72,6 +72,6 @@ pub fn handle_request(pool: &PgPool, request: &PlannerRequest) -> Result<ReturnT
         RequestType::GetUserEventsByCriteria(criteria) => {
             let res = engine::get_user_events_by_criteria(pool, &user, criteria)?;
             Ok(ReturnType::ManyEvents(res))
-        },
+        }
     }
 }
