@@ -2,7 +2,7 @@
 
 use crate::engine::db_wrapper::event::insert_event;
 use crate::engine::db_wrapper::schedule::{clear_user_schedule, delete_event_from_schedule};
-use crate::engine::db_wrapper::user::delete_user_from_database;
+use crate::engine::db_wrapper::user::{delete_user_from_database, insert_user};
 use chrono::Utc;
 use futures::executor::block_on;
 use sqlx::postgres::types::PgInterval;
@@ -129,6 +129,14 @@ pub fn delete_event(pool: &PgPool, event_id: &EventId) -> Result<PgQueryResult, 
     };
 }
 
+pub fn modify_event(pool: &PgPool, request: &EventModifyRequest) -> Result<PgQueryResult, Error> {
+    block_on(db_wrapper::event::modify_event(pool, request))
+}
+
+pub fn register_user(pool: &PgPool, user: &User) -> bool {
+    block_on(insert_user(pool, user))
+}
+
 pub fn delete_user(pool: &PgPool, user: &User) -> Result<(), Error> {
     db_wrapper::begin_transaction(pool).unwrap();
 
@@ -148,10 +156,6 @@ pub fn delete_user(pool: &PgPool, user: &User) -> Result<(), Error> {
             Err(error)
         }
     };
-}
-
-pub fn modify_event(pool: &PgPool, request: &EventModifyRequest) -> Result<PgQueryResult, Error> {
-    block_on(db_wrapper::event::modify_event(pool, request))
 }
 
 // TODO: Check if queried event belongs to given user - crucial for security & privacy reasons

@@ -12,9 +12,11 @@ fn main() {
 
     let id: planner::transport::EventId = 2;
 
+    let new_user = RegisterUserRequest::new().username("tomek").password("atomek");
+
     let request = planner::transport::PlannerRequest {
-        request_type: RequestType::DeleteEvent(id),
-        author_username: String::from("testuser"),
+        request_type: RequestType::RegisterUser(new_user),
+        author_username: String::from(""),
     };
 
     let _res = planner::transport::send_request(&c.pool, &request);

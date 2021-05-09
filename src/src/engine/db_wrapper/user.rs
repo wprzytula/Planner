@@ -36,6 +36,7 @@ impl User {
 
         self
     }
+
 }
 
 pub async fn insert_user(pool: &PgPool, user: &User) -> bool {
@@ -45,7 +46,7 @@ pub async fn insert_user(pool: &PgPool, user: &User) -> bool {
          VALUES ( $1, $2 )
          RETURNING *",
         user.username,
-        user.password
+        hash(&user.password)
     )
     .fetch_one(pool)
     .await;

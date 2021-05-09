@@ -13,6 +13,7 @@ pub type NewEventRequest = engine::NewEventRequest;
 pub type EventId = engine::EventId;
 pub type EventModifyRequest = engine::EventModifyRequest;
 pub type GetEventsCriteria = engine::GetEventsCriteria;
+pub type RegisterUserRequest = engine::User;
 
 pub enum RequestType {
     NewEvent(NewEventRequest),
@@ -20,6 +21,7 @@ pub enum RequestType {
     ModifyEvent(EventModifyRequest),
     GetUserEventById(EventId),
     GetUserEventsByCriteria(GetEventsCriteria),
+    RegisterUser(RegisterUserRequest),
     // Not implemented:
     // delete_user (do we need this?)
     // get_all_user_event
@@ -31,6 +33,7 @@ pub enum ReturnType {
     None,
     SingleEvent(Event),
     ManyEvents(Vec<Event>),
+    WasSuccess(bool),     // [TODO]: This is generally wrong, but we don't have a good error system.
 }
 
 pub struct PlannerRequest {
@@ -72,6 +75,10 @@ pub fn handle_request(pool: &PgPool, request: &PlannerRequest) -> Result<ReturnT
         RequestType::GetUserEventsByCriteria(criteria) => {
             let res = engine::get_user_events_by_criteria(pool, &user, criteria)?;
             Ok(ReturnType::ManyEvents(res))
+        }
+        RequestType::RegisterUser(new_user) => {
+            let res = engine::register_user(pool, new_user);
+            Ok(ReturnType::WasSuccess(res))
         }
     }
 }
