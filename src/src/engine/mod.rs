@@ -137,6 +137,10 @@ pub fn register_user(pool: &PgPool, user: &User) -> bool {
     block_on(insert_user(pool, user))
 }
 
+pub fn login(pool: &PgPool, username: &str, password: &str) -> Result<Option<User>, Error> {
+    db_wrapper::user::login(pool, username, password)
+}
+
 pub fn delete_user(pool: &PgPool, user: &User) -> Result<(), Error> {
     db_wrapper::begin_transaction(pool).unwrap();
 

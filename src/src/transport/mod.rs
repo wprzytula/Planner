@@ -22,6 +22,7 @@ pub enum RequestType {
     GetUserEventById(EventId),
     GetUserEventsByCriteria(GetEventsCriteria),
     RegisterUser(RegisterUserRequest),
+    Login(String, String),
     // Not implemented:
     // delete_user (do we need this?)
     // get_all_user_event
@@ -34,6 +35,7 @@ pub enum ReturnType {
     SingleEvent(Event),
     ManyEvents(Vec<Event>),
     WasSuccess(bool),     // [TODO]: This is generally wrong, but we don't have a good error system.
+    User(engine::User),
 }
 
 pub struct PlannerRequest {
@@ -79,6 +81,17 @@ pub fn handle_request(pool: &PgPool, request: &PlannerRequest) -> Result<ReturnT
         RequestType::RegisterUser(new_user) => {
             let res = engine::register_user(pool, new_user);
             Ok(ReturnType::WasSuccess(res))
+        }
+        RequestType::Login(username, password) => {
+            let res = engine::login(pool, username, password)?;
+            match res {
+                Some(us) => {
+                    Ok(ReturnType::User(us))
+                }
+                None => {
+                    Ok(ReturnType::None)
+                }
+            }
         }
     }
 }

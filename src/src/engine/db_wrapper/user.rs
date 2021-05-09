@@ -46,7 +46,7 @@ pub async fn insert_user(pool: &PgPool, user: &User) -> bool {
          VALUES ( $1, $2 )
          RETURNING *",
         user.username,
-        hash(&user.password)
+        user.password
     )
     .fetch_one(pool)
     .await;
