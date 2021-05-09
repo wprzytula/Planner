@@ -278,6 +278,7 @@ fn provide_new_event_info(connection: &Connection) -> Result<(), InterfaceError>
             return Err(InterfaceError);
         }
     };
+
     let minutes_p = match Minutes::new(minutes_p) {
         Ok(x) => x,
         Err(_) => {
