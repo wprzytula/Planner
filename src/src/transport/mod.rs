@@ -34,7 +34,7 @@ pub enum ReturnType {
     None,
     SingleEvent(Event),
     ManyEvents(Vec<Event>),
-    WasSuccess(bool),     // [TODO]: This is generally wrong, but we don't have a good error system.
+    WasSuccess(bool), // [TODO]: This is generally wrong, but we don't have a good error system.
     User(engine::User),
 }
 
@@ -85,12 +85,8 @@ pub fn handle_request(pool: &PgPool, request: &PlannerRequest) -> Result<ReturnT
         RequestType::Login(username, password) => {
             let res = engine::login(pool, username, password)?;
             match res {
-                Some(us) => {
-                    Ok(ReturnType::User(us))
-                }
-                None => {
-                    Ok(ReturnType::None)
-                }
+                Some(us) => Ok(ReturnType::User(us)),
+                None => Ok(ReturnType::None),
             }
         }
     }

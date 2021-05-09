@@ -1,5 +1,5 @@
-use planner::transport::*;
 use planner::transport::ReturnType;
+use planner::transport::*;
 
 fn main() {
     let res = planner::interface::mainloop();

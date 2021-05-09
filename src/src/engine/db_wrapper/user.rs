@@ -36,7 +36,6 @@ impl User {
 
         self
     }
-
 }
 
 pub async fn insert_user(pool: &PgPool, user: &User) -> bool {
