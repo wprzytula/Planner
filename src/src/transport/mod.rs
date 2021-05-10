@@ -85,7 +85,7 @@ pub fn handle_request(pool: &PgPool, request: &PlannerRequest) -> Result<ReturnT
                 date_between: Some(engine::get_desired_week(week_diff.clone())),
                 duration_between: None,
                 creation_date_between: None,
-                description_like: None
+                description_like: None,
             };
             let res = engine::get_user_events_by_criteria(pool, &user, &request)?;
             Ok(ReturnType::ManyEvents(res))

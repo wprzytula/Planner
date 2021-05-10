@@ -3,7 +3,7 @@
 use crate::engine::db_wrapper::event::insert_event;
 use crate::engine::db_wrapper::schedule::{clear_user_schedule, delete_event_from_schedule};
 use crate::engine::db_wrapper::user::{delete_user_from_database, insert_user};
-use chrono::{Utc, DateTime, NaiveDate, Datelike, Weekday, Duration, TimeZone, NaiveTime};
+use chrono::{DateTime, Datelike, Duration, NaiveDate, NaiveTime, TimeZone, Utc, Weekday};
 use futures::executor::block_on;
 use sqlx::postgres::types::PgInterval;
 use sqlx::postgres::PgQueryResult;
@@ -201,5 +201,8 @@ pub fn get_desired_week(diff: i64) -> (DateTime<Utc>, DateTime<Utc>) {
         .and_time(NaiveTime::from_hms(0, 0, 0));
     let sun = NaiveDate::from_isoywd(current_year, week + 1, Weekday::Mon)
         .and_time(NaiveTime::from_hms(0, 0, 0));
-    (Utc.from_local_datetime(&mon).unwrap(), Utc.from_local_datetime(&sun).unwrap())
+    (
+        Utc.from_local_datetime(&mon).unwrap(),
+        Utc.from_local_datetime(&sun).unwrap(),
+    )
 }
