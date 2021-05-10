@@ -192,7 +192,7 @@ pub fn get_user_events_by_criteria(
 }
 
 // [TODO]: Picking UTC may not be the best idea, but we don't have time.
-pub fn get_desired_week(diff: i64) -> (chrono::DateTime<Utc>, chrono::DateTime<Utc>) {
+pub fn get_desired_week(diff: i64) -> (DateTime<Utc>, DateTime<Utc>) {
     let future_date = chrono::offset::Utc::now() + Duration::weeks(diff);
     let current_year = future_date.year();
     let week = future_date.iso_week().week();
