@@ -8,6 +8,7 @@ use sqlx::PgPool;
 const DB_URI: &str = "postgres://adam:adam2137@51.38.126.54:8237/adam";
 
 // [TODO]: Add session info.
+#[derive(Debug, Clone)]
 pub struct Connection {
     pub pool: PgPool,
 }

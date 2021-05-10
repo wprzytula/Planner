@@ -7,8 +7,8 @@ authors = [
     "Wojciech Przytuła <wp418383@students.mimuw.edu.pl>",
     "Rafał Szulc <rs418393@students.mimuw.edu.pl>"
 ]
-
 edition = "2018"
+default-run = "gui"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -20,3 +20,11 @@ chrono = "0.4.19"
 regex = "1"
 djangohashers = "1.4.1"
 druid = { git = "https://github.com/linebender/druid.git" }
+
+[[bin]]
+name = "tui"
+path = "src/bin/tui.rs"
+
+[[bin]]
+name = "gui"
+path = "src/bin/gui.rs"

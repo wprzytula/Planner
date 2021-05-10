@@ -4,6 +4,7 @@ use sqlx::postgres::types::PgInterval;
 use sqlx::postgres::PgQueryResult;
 use sqlx::PgPool;
 use std::fmt;
+use druid::Data;
 
 const SECS_TO_DISTANT_YEAR: i64 = 10000000000;
 
@@ -41,7 +42,7 @@ pub fn duration_from(months: u32, days: u32, hours: Hours, minutes: Minutes) -> 
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Event {
     pub id: i32,
     pub title: String,
@@ -123,6 +124,13 @@ impl fmt::Display for Event {
                 "<no description>"
             }
         )
+    }
+}
+
+// TODO: more accurate impl
+impl Data for Event {
+    fn same(&self, other: &Self) -> bool {
+        self.id.same(&other.id) && self.title.same(&other.title)
     }
 }
 

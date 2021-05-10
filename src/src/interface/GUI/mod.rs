@@ -1,16 +1,27 @@
 use crate::engine::User;
+use crate::engine::db_wrapper::user::get_test_user;
+use crate::engine::Event as SchedEvent;
 
-use druid::{Widget};
+use druid::{Widget, UnitPoint, WidgetExt};
 use druid::widget::prelude::*;
-use druid::widget::{
-    Align, BackgroundBrush, Button, Controller, ControllerHost, Flex, Label, Padding,
-};
+use druid::widget::{Align, BackgroundBrush, Button, Controller, ControllerHost, Flex, Label, Padding, Scroll, List};
 use druid::Target::Global;
 use druid::{
     commands as sys_cmds, AppDelegate, AppLauncher, Application, Color, Command, Data, DelegateCtx,
-    Handled, LocalizedString, Menu, MenuItem, Target, WindowDesc, WindowId,
+    Handled, Lens, LocalizedString, Menu, MenuItem, Target, WindowDesc, WindowId,
 };
-use crate::engine::db_wrapper::user::get_test_user;
+// use druid::im::{vector, Vector};
+use druid::lens::{self, LensExt};
+use druid::widget::{TextBox};
+use druid::{Env};
+
+use crate::transport::RequestType::{Login, RegisterUser};
+use crate::transport::{send_request, PlannerRequest, RequestType, ReturnType};
+use crate::engine::db_wrapper::Connection;
+use sqlx::Error;
+
+use std::rc::Rc;
+use std::sync::Arc;
 
 pub fn gui_main(logged_user: Option<User>) {
     let main_window = WindowDesc::new(ui_builder())
@@ -27,16 +38,20 @@ pub fn gui_main(logged_user: Option<User>) {
                 Some(user) => user,
                 None => get_test_user()
             },
+            events: Arc::new(vec![]),
+            connection: Rc::new(Connection::new().expect("Failed connecting to database."))
             // glow_hot: false
         })
         .expect("launch failed");
 
 }
 
-#[derive(Debug, Clone, Data)]
+#[derive(Debug, Clone, Data, Lens)]
 struct State {
-    week: i32,
+    week: i64,
     user: User,
+    events: Arc<Vec<SchedEvent>>,
+    connection: Rc<Connection>
     // glow_hot: bool,
 }
 // #[derive(Debug, Clone, Default, Data)]
@@ -48,12 +63,39 @@ struct State {
 
 fn ui_builder() -> impl Widget<State> {
     let text = LocalizedString::new("hello-counter")
-        .with_arg("count", |data: &State, _env| 1.into()/*data.user.get_username()[..].into()*/);
+        .with_arg("count", |data: &State, _env| data.week.into());
     let label = Label::new(text);
-    // let inc_button =
-    //     Button::<State>::new("Add menu item").on_click(|_ctx, data, _env| data.menu_count += 1);
-    // let dec_button = Button::<State>::new("Remove menu item")
-    //     .on_click(|_ctx, data, _env| data.menu_count = data.menu_count.saturating_sub(1));
+    let fetch_button =
+        Button::<State>::new("Fetch events")
+            .on_click(|_ctx, data, _env| {
+                match send_request(&data.connection.pool, &PlannerRequest {
+                    request_type: RequestType::GetUserEventsByRelativeWeek(data.week),
+                    author_username: data.user.get_username().clone() }) {
+                    Ok(resp) => match resp {
+                        ReturnType::ManyEvents(ev) => {
+                            data.events = Arc::new(ev);
+                            println!("{:?}", data.events);
+                        },
+                        _ => println!("Bad response type from server!")
+                    }
+                    Err(_) => println!("Error fetching events!")
+                }
+            });
+    let list = Scroll::new(List::new(|| {
+            Label::new(|item: &SchedEvent, _env: &_| format!("List item #{:?}", item))
+                .align_vertical(UnitPoint::LEFT)
+                .padding(10.0)
+                .expand()
+                .height(50.0)
+                .background(Color::rgb(0.5, 0.5, 0.5))
+        }))
+            .vertical()
+            .lens(State::events);
+
+    let inc_button = Button::<State>::new("Week +1")
+        .on_click(|_ctx, data, _env| data.week += 1);
+    let dec_button = Button::<State>::new("Week -1")
+        .on_click(|_ctx, data, _env| data.week -= 1);
     // let new_button = Button::<State>::new("New window").on_click(|ctx, _data, _env| {
     //     ctx.submit_command(sys_cmds::NEW_FILE.to(Global));
     // });
@@ -64,13 +106,15 @@ fn ui_builder() -> impl Widget<State> {
     let mut col = Flex::column();
     col.add_flex_child(Align::centered(Padding::new(5.0, label)), 1.0);
     let mut row = Flex::row();
-    // row.add_child(Padding::new(5.0, inc_button));
-    // row.add_child(Padding::new(5.0, dec_button));
+    row.add_child(Padding::new(5.0, fetch_button));
+    row.add_child(Padding::new(5.0, inc_button));
+    row.add_child(Padding::new(5.0, dec_button));
     col.add_flex_child(Align::centered(row), 1.0);
     let mut row = Flex::row();
     // row.add_child(Padding::new(5.0, new_button));
     row.add_child(Padding::new(5.0, quit_button));
     col.add_flex_child(Align::centered(row), 1.0);
+    col.add_flex_child(list, 1.0);
     col
     // let content = ControllerHost::new(col, ContextMenuController);
     // Glow::new(content)
@@ -237,3 +281,82 @@ fn ui_builder() -> impl Widget<State> {
 // }
 //
 //
+
+const WINDOW_TITLE: LocalizedString<LoginState> = LocalizedString::new("Text Options");
+
+#[derive(Clone, Data, Lens)]
+struct LoginState {
+    login: Arc<String>,
+    password: Arc<String>,
+    result: Arc<String>,
+}
+
+pub fn main() {
+    // describe the main window
+    let main_window = WindowDesc::new(build_root_widget())
+        .title(WINDOW_TITLE)
+        .window_size((400.0, 600.0));
+
+    // create the initial app state
+    let initial_state = LoginState {
+        login: "".to_string().into(),
+        password: "".to_string().into(),
+        result: "".to_string().into(),
+    };
+
+    // start the application
+    AppLauncher::with_window(main_window)
+        .log_to_console()
+        .launch(initial_state)
+        .expect("Failed to launch application");
+}
+
+fn build_root_widget() -> impl Widget<LoginState> {
+    let label = Label::new(|data: &LoginState, _env: &Env| {
+        format!("{}", data.result.as_str())
+    })
+        .center();
+    Flex::column()
+        .cross_axis_alignment(druid::widget::CrossAxisAlignment::Start)
+        .with_child(
+            TextBox::new()
+                .with_placeholder("Login")
+                .lens(LoginState::login)
+                .center(),
+        )
+        .with_default_spacer()
+        .with_child(
+            TextBox::new()
+                .with_placeholder("Password")
+                .lens(LoginState::password)
+                .center(),
+        )
+        .with_child(
+            Button::new("Login")
+                .on_click(|_, data: &mut LoginState, _| {
+                    let c = Connection::new().unwrap();
+
+                    let req = PlannerRequest {
+                        request_type: Login(data.login.to_string(), data.password.to_string()),
+                        author_username: String::from(""),
+                    };
+                    let res = send_request(&c.pool, &req).unwrap();
+
+                    match res {
+                        ReturnType::User(user) => {
+                            println!("Got user {}", user.get_username());
+                            data.result = Arc::from(String::from("Login successful."));
+                        },
+                        _ => {
+                            println!("Error in request");
+                            data.result = Arc::from(String::from("Login failed."));
+                        }
+                    }
+                })
+                .center(),
+        )
+        .with_child(
+            label
+        )
+        .padding(8.0)
+}
