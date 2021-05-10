@@ -2,7 +2,7 @@
 
 use crate::engine::db_wrapper::event::insert_event;
 use crate::engine::db_wrapper::schedule::{clear_user_schedule, delete_event_from_schedule};
-use crate::engine::db_wrapper::user::delete_user_from_database;
+use crate::engine::db_wrapper::user::{delete_user_from_database, insert_user};
 use chrono::Utc;
 use futures::executor::block_on;
 use sqlx::postgres::types::PgInterval;
@@ -12,14 +12,14 @@ use sqlx::PgPool;
 // [fixme]: This probably should not be public.
 pub mod db_wrapper;
 
-type Error = sqlx::Error;
+pub type Error = sqlx::Error;
 // For now let us assume that we give only user's username (I am not sure if it's safe).
-type User = db_wrapper::user::User;
+pub type User = db_wrapper::user::User;
 
 // This should be replaced with DTO or other temporary structure.
-type NewEventRequest = db_wrapper::event::Event;
-type Event = db_wrapper::event::Event;
-type EventId = i32;
+pub type NewEventRequest = db_wrapper::event::Event;
+pub type Event = db_wrapper::event::Event;
+pub type EventId = i32;
 
 pub struct EventModifyRequest {
     pub id: i32,
@@ -129,6 +129,18 @@ pub fn delete_event(pool: &PgPool, event_id: &EventId) -> Result<PgQueryResult, 
     };
 }
 
+pub fn modify_event(pool: &PgPool, request: &EventModifyRequest) -> Result<PgQueryResult, Error> {
+    block_on(db_wrapper::event::modify_event(pool, request))
+}
+
+pub fn register_user(pool: &PgPool, user: &User) -> bool {
+    block_on(insert_user(pool, user))
+}
+
+pub fn login(pool: &PgPool, username: &str, password: &str) -> Result<Option<User>, Error> {
+    db_wrapper::user::login(pool, username, password)
+}
+
 pub fn delete_user(pool: &PgPool, user: &User) -> Result<(), Error> {
     db_wrapper::begin_transaction(pool).unwrap();
 
@@ -150,14 +162,10 @@ pub fn delete_user(pool: &PgPool, user: &User) -> Result<(), Error> {
     };
 }
 
-pub fn modify_event(pool: &PgPool, request: EventModifyRequest) -> Result<PgQueryResult, Error> {
-    block_on(db_wrapper::event::modify_event(pool, request))
-}
-
 // TODO: Check if queried event belongs to given user - crucial for security & privacy reasons
 pub fn get_user_event_by_id(
     pool: &PgPool,
-    user: &User,
+    _user: &User,
     event_id: &EventId,
 ) -> Result<Event, Error> {
     block_on(db_wrapper::event::get_event_by_id(pool, *event_id))
@@ -173,7 +181,7 @@ pub fn get_all_user_events(pool: &PgPool, user: &User) -> Result<Vec<Event>, Err
 pub fn get_user_events_by_criteria(
     pool: &PgPool,
     user: &User,
-    criteria: GetEventsCriteria,
+    criteria: &GetEventsCriteria,
 ) -> Result<Vec<Event>, Error> {
     let events = block_on(db_wrapper::event::get_user_events_by_criteria(
         pool,
