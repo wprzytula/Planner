@@ -3,7 +3,7 @@
 use crate::engine::db_wrapper::event::insert_event;
 use crate::engine::db_wrapper::schedule::{clear_user_schedule, delete_event_from_schedule};
 use crate::engine::db_wrapper::user::{delete_user_from_database, insert_user};
-use chrono::Utc;
+use chrono::{Utc, DateTime, NaiveDate, Datelike, Weekday, Duration, TimeZone, NaiveTime};
 use futures::executor::block_on;
 use sqlx::postgres::types::PgInterval;
 use sqlx::postgres::PgQueryResult;
@@ -189,4 +189,17 @@ pub fn get_user_events_by_criteria(
         criteria,
     ))?;
     Ok(events)
+}
+
+// [TODO]: Picking UTC may not be the best idea, but we don't have time.
+pub fn get_desired_week(diff: i64) -> (chrono::DateTime<Utc>, chrono::DateTime<Utc>) {
+    let future_date = chrono::offset::Utc::now() + Duration::weeks(diff);
+    let current_year = future_date.year();
+    let week = future_date.iso_week().week();
+
+    let mon = NaiveDate::from_isoywd(current_year, week, Weekday::Mon)
+        .and_time(NaiveTime::from_hms(0, 0, 0));
+    let sun = NaiveDate::from_isoywd(current_year, week + 1, Weekday::Mon)
+        .and_time(NaiveTime::from_hms(0, 0, 0));
+    (Utc.from_local_datetime(&mon).unwrap(), Utc.from_local_datetime(&sun).unwrap())
 }
