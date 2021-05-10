@@ -259,7 +259,8 @@ pub async fn get_user_events_by_criteria(
                 AND duration BETWEEN $5 AND $6
                 AND creation_date BETWEEN $7 AND $8
                 AND (description IS NULL
-                     OR description LIKE '%' || $9 || '%')",
+                     OR description LIKE '%' || $9 || '%')
+            ORDER BY date ASC",
         user,
         title,
         date.0,
