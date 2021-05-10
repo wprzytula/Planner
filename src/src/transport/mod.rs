@@ -21,6 +21,7 @@ pub enum RequestType {
     ModifyEvent(EventModifyRequest),
     GetUserEventById(EventId),
     GetUserEventsByCriteria(GetEventsCriteria),
+    GetUserEventsByRelativeWeek(i64),
     RegisterUser(RegisterUserRequest),
     Login(String, String),
     // Not implemented:
@@ -76,6 +77,17 @@ pub fn handle_request(pool: &PgPool, request: &PlannerRequest) -> Result<ReturnT
         }
         RequestType::GetUserEventsByCriteria(criteria) => {
             let res = engine::get_user_events_by_criteria(pool, &user, criteria)?;
+            Ok(ReturnType::ManyEvents(res))
+        }
+        RequestType::GetUserEventsByRelativeWeek(week_diff) => {
+            let request = GetEventsCriteria {
+                title_like: None,
+                date_between: Some(engine::get_desired_week(week_diff.clone())),
+                duration_between: None,
+                creation_date_between: None,
+                description_like: None
+            };
+            let res = engine::get_user_events_by_criteria(pool, &user, &request)?;
             Ok(ReturnType::ManyEvents(res))
         }
         RequestType::RegisterUser(new_user) => {
