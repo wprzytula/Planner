@@ -19,5 +19,4 @@ futures = "0.3.13"
 chrono = "0.4.19"
 regex = "1"
 djangohashers = "1.4.1"
-orbtk = "0.2.31"
-sdl2 = "0.34"
+druid = { git = "https://github.com/linebender/druid.git" }

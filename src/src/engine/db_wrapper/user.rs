@@ -8,7 +8,8 @@ use djangohashers::{check_password_tolerant, make_password_with_algorithm};
 use futures::executor::block_on;
 use sqlx::PgPool;
 
-#[derive(Debug)]
+use druid::Data;
+#[derive(Debug, Clone, Data)]
 pub struct User {
     username: String,
     password: String,
@@ -37,6 +38,12 @@ impl User {
         self
     }
 }
+
+// impl Clone for User {
+//     fn clone(&self) -> Self {
+//         User{ username: self.username.clone(), password: self.password.clone() }
+//     }
+// }
 
 pub async fn insert_user(pool: &PgPool, user: &User) -> bool {
     let query = sqlx::query_as!(
