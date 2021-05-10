@@ -4,6 +4,7 @@ use sqlx::postgres::PgPoolOptions;
 use sqlx::PgPool;
 
 // [TODO] Move this to config file.
+// [FIXME] Temporary change for testing.
 const DB_URI: &str = "postgres://adam:adam2137@51.38.126.54:8237/adam";
 
 // [TODO]: Add session info.

@@ -184,7 +184,7 @@ fn provide_search_conditions(connection: &Connection) -> Result<(), InterfaceErr
 
     criteria = criteria.date_between(datetime_old, datetime_new);
 
-    match get_user_events_by_criteria(&connection.pool, &get_test_user(), criteria) {
+    match get_user_events_by_criteria(&connection.pool, &get_test_user(), &criteria) {
         Ok(events) => {
             println!("These are results of your query:");
             if events.is_empty() {
