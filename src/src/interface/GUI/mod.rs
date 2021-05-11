@@ -74,23 +74,26 @@ fn ui_builder() -> impl Widget<State> {
                     Ok(resp) => match resp {
                         ReturnType::ManyEvents(ev) => {
                             data.events = Arc::new(ev);
-                            println!("{:?}", data.events);
+                            println!("{:#?}", data.events);
                         },
                         _ => println!("Bad response type from server!")
                     }
                     Err(_) => println!("Error fetching events!")
                 }
             });
-    let list = Scroll::new(List::new(|| {
-            Label::new(|item: &SchedEvent, _env: &_| format!("List item #{:?}", item))
+    let list = Scroll::new(Scroll::new(List::new(|| {
+            Label::new(|item: &SchedEvent, _env: &_| format!("{:?}", item))
                 .align_vertical(UnitPoint::LEFT)
                 .padding(10.0)
                 .expand()
                 .height(50.0)
+                .width(2000.0)
                 .background(Color::rgb(0.5, 0.5, 0.5))
         }))
-            .vertical()
-            .lens(State::events);
+            .horizontal()
+            .lens(State::events))
+        .vertical();
+        // .lens(State::events);
 
     let inc_button = Button::<State>::new("Week +1")
         .on_click(|_ctx, data, _env| data.week += 1);
@@ -282,81 +285,204 @@ fn ui_builder() -> impl Widget<State> {
 //
 //
 
-const WINDOW_TITLE: LocalizedString<LoginState> = LocalizedString::new("Text Options");
+// mod login {
+//     use druid::{Data, Lens, LocalizedString, WindowDesc, AppLauncher, Widget, Env, WidgetExt};
+//     use std::sync::Arc;
+//     use druid::widget::{Label, Flex, TextBox, Button};
+//     use crate::transport::{PlannerRequest, send_request, ReturnType};
+//     use crate::engine::db_wrapper::Connection;
+//     use crate::transport::RequestType::Login;
+//     use crate::engine::User;
+//
+//     const WINDOW_TITLE: LocalizedString<LoginState> = LocalizedString::new("Text Options");
+//
+//     #[derive(Clone, Data, Lens)]
+//     struct LoginState {
+//         login: Arc<String>,
+//         password: Arc<String>,
+//         result: Arc<String>,
+//     }
+//
+//     pub fn login(user_loggedin: &'static mut User) {
+//         let login_window = WindowDesc::new(build_root_widget(user_loggedin))
+//             .title(WINDOW_TITLE)
+//             .window_size((400.0, 600.0));
+//
+//         // create the initial app state
+//         let initial_state = LoginState {
+//             login: "".to_string().into(),
+//             password: "".to_string().into(),
+//             result: "".to_string().into(),
+//         };
+//
+//         // start the application
+//         AppLauncher::with_window(login_window)
+//             .log_to_console()
+//             .launch(initial_state)
+//             .expect("Failed to launch application");
+//     }
+//
+//     fn build_root_widget(user_loggedin: &'static mut User) -> impl Widget<LoginState> {
+//         let label = Label::new(|data: &LoginState, _env: &Env| {
+//             format!("{}", data.result.as_str())
+//         })
+//             .center();
+//         Flex::column()
+//             .cross_axis_alignment(druid::widget::CrossAxisAlignment::Start)
+//             .with_child(
+//                 TextBox::new()
+//                     .with_placeholder("Login")
+//                     .lens(LoginState::login)
+//                     .center(),
+//             )
+//             .with_default_spacer()
+//             .with_child(
+//                 TextBox::new()
+//                     .with_placeholder("Password")
+//                     .lens(LoginState::password)
+//                     .center(),
+//             )
+//             .with_child(
+//                 Button::new("Login")
+//                     .on_click(move |_, data: &mut LoginState, _| {
+//                         let c = Connection::new().unwrap();
+//
+//                         let req = PlannerRequest {
+//                             request_type: Login(data.login.to_string(), data.password.to_string()),
+//                             author_username: String::from(""),
+//                         };
+//                         let res = send_request(&c.pool, &req).unwrap();
+//
+//                         match res {
+//                             ReturnType::User(user) => {
+//                                 println!("Got user {}", user.get_username());
+//                                 data.result = Arc::from(String::from("Login successful."));
+//                                 *user_loggedin = user.clone();
+//                             },
+//                             _ => {
+//                                 println!("Error in request");
+//                                 data.result = Arc::from(String::from("Login failed."));
+//                             }
+//                         }
+//                     })
+//                     .center(),
+//             )
+//             .with_child(
+//                 label
+//             )
+//             .padding(8.0)
+//     }
+// }
 
-#[derive(Clone, Data, Lens)]
-struct LoginState {
-    login: Arc<String>,
-    password: Arc<String>,
-    result: Arc<String>,
-}
+mod register {
+    use druid::{Data, Lens, LocalizedString, WindowDesc, AppLauncher, Widget, Env, WidgetExt};
+    use std::sync::Arc;
+    use druid::widget::{Label, Flex, TextBox, Button};
+    use crate::transport::{PlannerRequest, send_request, ReturnType};
+    use crate::engine::db_wrapper::Connection;
+    use crate::transport::RequestType::{Login, RegisterUser};
+    use crate::engine::User;
 
-pub fn main() {
-    // describe the main window
-    let main_window = WindowDesc::new(build_root_widget())
-        .title(WINDOW_TITLE)
-        .window_size((400.0, 600.0));
+    const WINDOW_TITLE: LocalizedString<RegisterState> = LocalizedString::new("Text Options");
 
-    // create the initial app state
-    let initial_state = LoginState {
-        login: "".to_string().into(),
-        password: "".to_string().into(),
-        result: "".to_string().into(),
-    };
+    #[derive(Clone, Data, Lens)]
+    struct RegisterState {
+        login: Arc<String>,
+        password: Arc<String>,
+        password_rep: Arc<String>,
+        result: Arc<String>,
+    }
 
-    // start the application
-    AppLauncher::with_window(main_window)
-        .log_to_console()
-        .launch(initial_state)
-        .expect("Failed to launch application");
-}
+    pub fn register() {
+        // describe the main window
+        let main_window = WindowDesc::new(build_root_widget())
+            .title(WINDOW_TITLE)
+            .window_size((400.0, 600.0));
 
-fn build_root_widget() -> impl Widget<LoginState> {
-    let label = Label::new(|data: &LoginState, _env: &Env| {
-        format!("{}", data.result.as_str())
-    })
-        .center();
-    Flex::column()
-        .cross_axis_alignment(druid::widget::CrossAxisAlignment::Start)
-        .with_child(
-            TextBox::new()
-                .with_placeholder("Login")
-                .lens(LoginState::login)
-                .center(),
-        )
-        .with_default_spacer()
-        .with_child(
-            TextBox::new()
-                .with_placeholder("Password")
-                .lens(LoginState::password)
-                .center(),
-        )
-        .with_child(
-            Button::new("Login")
-                .on_click(|_, data: &mut LoginState, _| {
-                    let c = Connection::new().unwrap();
+        // create the initial app state
+        let initial_state = RegisterState {
+            login: "".to_string().into(),
+            password: "".to_string().into(),
+            password_rep: "".to_string().into(),
+            result: "".to_string().into(),
+        };
 
-                    let req = PlannerRequest {
-                        request_type: Login(data.login.to_string(), data.password.to_string()),
-                        author_username: String::from(""),
-                    };
-                    let res = send_request(&c.pool, &req).unwrap();
+        // start the application
+        AppLauncher::with_window(main_window)
+            .log_to_console()
+            .launch(initial_state)
+            .expect("Failed to launch application");
+    }
 
-                    match res {
-                        ReturnType::User(user) => {
-                            println!("Got user {}", user.get_username());
-                            data.result = Arc::from(String::from("Login successful."));
-                        },
-                        _ => {
-                            println!("Error in request");
-                            data.result = Arc::from(String::from("Login failed."));
+    fn build_root_widget() -> impl Widget<RegisterState> {
+        let label = Label::new(|data: &RegisterState, _env: &Env| {
+            format!("{}", data.result.as_str())
+        })
+            .center();
+        Flex::column()
+            .cross_axis_alignment(druid::widget::CrossAxisAlignment::Start)
+            .with_child(
+                TextBox::new()
+                    .with_placeholder("Login")
+                    .lens(RegisterState::login)
+                    .center(),
+            )
+            .with_default_spacer()
+            .with_child(
+                TextBox::new()
+                    .with_placeholder("Password")
+                    .lens(RegisterState::password)
+                    .center(),
+            )
+            .with_default_spacer()
+            .with_child(
+                TextBox::new()
+                    .with_placeholder("Repeat password")
+                    .lens(RegisterState::password_rep)
+                    .center(),
+            )
+            .with_child(
+                Button::new("Register")
+                    .on_click(|_, data: &mut RegisterState, _| {
+                        if data.login.is_empty() {
+                            data.result = Arc::from(String::from("Login empty."));
+                        } else if data.password.is_empty() {
+                            data.result = Arc::from(String::from("Password empty."));
+                        } else if data.password_rep.is_empty() {
+                            data.result = Arc::from(String::from("Please repeat password."));
+                        } else if data.password != data.password_rep {
+                            data.result = Arc::from(String::from("Passwords do not match."));
+                        } else {
+                            let c = Connection::new().unwrap();
+
+                            let req = PlannerRequest {
+                                request_type: RegisterUser(User::new()
+                                    .username(data.login.as_str())
+                                    .password(data.password.as_str())),
+                                author_username: String::from(""),
+                            };
+                            let res = send_request(&c.pool, &req).unwrap();
+
+                            match res {
+                                ReturnType::WasSuccess(was) => {
+                                    if was {
+                                        data.result = Arc::from(String::from("Registration successful."));
+                                    } else {
+                                        data.result = Arc::from(String::from("Registration failed."));
+                                    }
+                                }
+                                _ => {
+                                    println!("Error in request");
+                                    data.result = Arc::from(String::from("Unexpected error."));
+                                }
+                            }
                         }
-                    }
-                })
-                .center(),
-        )
-        .with_child(
-            label
-        )
-        .padding(8.0)
+                    })
+                    .center(),
+            )
+            .with_child(
+                label
+            )
+            .padding(8.0)
+    }
 }
